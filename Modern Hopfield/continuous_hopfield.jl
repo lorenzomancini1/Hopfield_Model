@@ -5,7 +5,8 @@ using LinearAlgebra, Random, Statistics
 export init_pattern, overlap, generate_patterns, energy
 
 function init_pattern(N)
-    σ = rand(1:5, N)
+    #σ = rand(1:5, N) #cambiare
+    σ = randn(N, M)
     return σ
 end
 
@@ -14,7 +15,8 @@ function overlap(σ1::AbstractVector, σ2::AbstractVector)
 end
 
 function generate_patterns(M, N)
-    ξ = rand(1:5, N, M)
+    #ξ = 1. + 4 * rand(N, M)
+    ξ = randn(N, M)
     return ξ
 end
 
