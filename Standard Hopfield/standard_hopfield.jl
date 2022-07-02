@@ -2,7 +2,7 @@ module SH
 
 using Random, Statistics, LinearAlgebra
 
-export init_pattern, overlap, generate_patterns, perturb, energy_variation, store, metropolis, monte_carlo
+export init_pattern, overlap, generate_patterns, perturb, energy, energy_variation, store, metropolis, monte_carlo
 
 function init_pattern(N::Int)
     σ = rand([-1, 1], N)
@@ -32,21 +32,25 @@ end
 function store(ξ::AbstractMatrix)
     N = size(ξ, 1)
     J = ξ * ξ'
-    setindex!.(Ref(J), 0.0, 1:N, 1:N)
+    J[diagind(J)] .= 0
     return J ./ N
 end
 
-function energy_variation(σ::AbstractVector, J::AbstractMatrix, i::Int)
+function energy(J::AbstractMatrix, σ::AbstractVector)
+    return -(σ' * J * σ) / 2
+end
+
+function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
     return @views 2 * σ[i] * (J[:, i] ⋅ σ)
 end
 
-function metropolis(σ, J, β = 10)
+function metropolis(J, σ, β)
     N = length(σ)
     
     fliprate = 0
     for n in 1:N
         i = rand(1:N)
-        ΔE = energy_variation(σ, J, i)
+        ΔE = energy_variation(J, σ, i)
         
         if (ΔE < 0) || rand() < exp(-β*ΔE)
             σ[i] *= -1
@@ -56,13 +60,14 @@ function metropolis(σ, J, β = 10)
     return σ, fliprate/N
 end
 
-function monte_carlo(σ::AbstractVector, J::AbstractMatrix, nsweeps, earlystop = 0, β = 10)
+function monte_carlo(J::AbstractMatrix, σ::AbstractVector; nsweeps = 100, earlystop = 0, β = 10)
     
+    σ_rec = copy(σ)
     for sweep in 1:nsweeps
-        σ, fliprate = metropolis(σ, J, β)
+        σ_rec, fliprate = metropolis(J, σ_rec, β)
         fliprate <= earlystop && break
     end
-    return σ
+    return σ_rec
 end
 
 end
