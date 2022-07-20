@@ -1,6 +1,7 @@
 module SH
 
 using Random, Statistics, LinearAlgebra
+using LoopVectorization, Tullio
 
 export init_pattern, overlap, generate_patterns, perturb, energy, energy_variation, store, metropolis, monte_carlo
 
@@ -10,7 +11,7 @@ function init_pattern(N::Int)
 end
 
 function overlap(σ1::AbstractVector, σ2::AbstractVector)
-    return σ1 ⋅ σ2
+    return σ1 ⋅ σ2 / length(σ1)
 end
 
 function generate_patterns(M, N)
@@ -44,12 +45,27 @@ function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
     return @views 2 * σ[i] * (J[:, i] ⋅ σ)
 end
 
+# ~30% faster
+function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
+    s = 0.0
+    @tturbo for j in eachindex(σ)
+        s += J[j, i] * σ[j]
+    end
+    return 2 * σ[i] * s
+end
+# approx. the same as tturbo version
+# function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
+#     Ji = @view J[:,i]
+#     @tullio s := Ji[j] * σ[j] threads=true
+#     return 2 * σ[i] * s
+# end
+
 function metropolis(J, σ, β)
     N = length(σ)
     
     fliprate = 0
-    for n in 1:N
-        i = rand(1:N)
+    is = randperm(N)
+    for i in is
         ΔE = energy_variation(J, σ, i)
         
         if (ΔE < 0) || rand() < exp(-β*ΔE)
@@ -60,12 +76,24 @@ function metropolis(J, σ, β)
     return σ, fliprate/N
 end
 
-function monte_carlo(J::AbstractMatrix, σ::AbstractVector; nsweeps = 100, earlystop = 0, β = 10)
+function monte_carlo(J::AbstractMatrix, σ::AbstractVector; 
+        nsweeps = 100, earlystop = 0, β = 10, annealing = false)
     
     σ_rec = copy(σ)
-    for sweep in 1:nsweeps
-        σ_rec, fliprate = metropolis(J, σ_rec, β)
-        fliprate <= earlystop && break
+
+    if annealing
+        Tf  = 1 / β 
+        T = range(2, Tf, length=nsweeps)
+        β_n = 1 ./ T
+        for β in β_n
+            σ_rec, fliprate = metropolis(J, σ_rec, β)
+            fliprate <= earlystop && break
+        end
+    else
+        for sweep in 1:nsweeps
+            σ_rec, fliprate = metropolis(J, σ_rec, β)
+            fliprate <= earlystop && break
+        end
     end
     return σ_rec
 end
