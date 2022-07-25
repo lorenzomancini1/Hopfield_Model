@@ -107,3 +107,4 @@ function experiment_global_minimum(;
     success = maximum(abs, overlaps) >= 0.95
     return success
 end
+
