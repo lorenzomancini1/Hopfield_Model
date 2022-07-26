@@ -1,14 +1,14 @@
 # Hopfield Model
 In this repository we provide numerical simulations to investigate the basins of attractions of the Hopfield Model.
 ## Standard Hopfield
-In the `Standard Hopfield` model, patterns $\bm{\xi} \in [-1, 1]^N$ are stored exploiting the Hebb's rule, where we define a coupling matrix $J$ with entries given by:
+In the `Standard Hopfield` model, patterns $\xi \in [-1, 1]^N$ are stored exploiting the Hebb's rule, where we define a coupling matrix $J$ with entries given by:
 $$
 	J_{ij} = \frac{1}{N} \sum_{\mu = 1}^M \xi_i^\mu\xi_j^\mu,
 $$
 where $M = \alpha N$ is the number of stored patterns.
 The energy of a configuration $\bm{\sigma}$ is:
 $$
-E(\bm{\sigma}) = \frac{1}{2} \sum_{ij} J_{ij} \sigma_i \sigma_j.
+E({\sigma}) = \frac{1}{2} \sum_{ij} J_{ij} \sigma_i \sigma_j.
 $$
 This model is able to store at most $M = \alpha_c N$ patterns with $\alpha_c \simeq 0.138$.
 ### Critical Noise
