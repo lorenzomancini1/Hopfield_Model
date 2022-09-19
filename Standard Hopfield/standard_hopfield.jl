@@ -41,9 +41,9 @@ function energy(J::AbstractMatrix, σ::AbstractVector)
     return -(σ' * J * σ) / 2
 end
 
-function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
-    return @views 2 * σ[i] * (J[:, i] ⋅ σ)
-end
+#function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
+#    return @views 2 * σ[i] * (J[:, i] ⋅ σ)
+#end
 
 # ~30% faster
 function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
