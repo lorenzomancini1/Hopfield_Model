@@ -5,7 +5,8 @@ using DelimitedFiles, Random
 function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples;
     nsweeps = 100,
     β = 10,
-    earlystop = 0)
+    earlystop = 0,
+    thr = 0.95)
 
     M = round(Int, N * α)
 
@@ -31,7 +32,7 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
             
             m = SH.overlap(σ_rec, σ)
             #print(m)
-            if m >= 0.95
+            if m >= thr
                 probs_over_samples[sample] = 1
                 #count += 1
             end
@@ -52,11 +53,13 @@ function reconstruction_probability(NN::AbstractVector,
     β = 10^3,
     nsamples = 5*10^2,
     earlystop = 0,
+    thr = 0.95,
     show = false,
     save = true)
 
     for N in NN 
-        prob, error, mag = one_reconstruction_probability(N, pp, α, nsamples; nsweeps, β, earlystop) 
+        prob, error, mag = one_reconstruction_probability(N, pp, α, nsamples; 
+        nsweeps = nsweeps, β = β, earlystop = earlystop, thr = thr) 
 
         if show
             fig = plot(pp, prob, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
@@ -79,5 +82,24 @@ function reconstruction_probability(NN::AbstractVector,
                 end
             end
         end
-    end       
+    end
+    return       
+end
+
+function hist_overlaps(;
+        α = 0.05, N = 1000, bins = 60, nsweeps = 100,
+         earlystop = 0, β = 10, annealing = false)
+    
+    M = round(Int, N*α)
+    ξ = SH.generate_patterns(M, N)
+    J = SH.store(ξ)
+        # take a random configuration
+    σ = rand([-1,1], N)
+    σ_new = SH.monte_carlo(J, σ; nsweeps = nsweeps, earlystop = earlystop, β = β, annealing = annealing)
+
+    overlaps = (σ_new' * ξ) ./ N
+    fig = histogram(overlaps', bins = bins)
+    display(fig)
+    
+    return
 end
