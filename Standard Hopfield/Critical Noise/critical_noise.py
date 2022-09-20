@@ -36,14 +36,14 @@ def plotreg(N_reciproc, pcN, popt):
 
 def P_rec(p, q, a, b, c, d): return np.exp(q + a * p + b * p**2 + c * p**3 + d * p**4)
 
-def compute_pc(α, NN, plot_fit = False, plot_reg = False, thr = 0.5):
+def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data", plot_fit = False, plot_reg = False, thr = 0.5):
     
     pcN = []
     folder = str(α).replace(".", "")
-    pp = np.loadtxt("workstation_data/alpha_"+folder+"/probsN{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
+    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
     for N in NN:
         
-        P_N = np.loadtxt("workstation_data/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 1]
+        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 1]
         popt, pcov = curve_fit(P_rec, pp, P_N)
         
         if plot_fit: plotfit(pp, N, P_N, popt)                        

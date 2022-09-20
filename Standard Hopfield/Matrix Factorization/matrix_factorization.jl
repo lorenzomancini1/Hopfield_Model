@@ -47,8 +47,8 @@ function recover_global_minimum(J;
     ntrials = 10,
     nrestarts = 1,
     annealing = false,
-    λ = 1, 
-    verbose = 0)
+    λ = 1,
+    info = false)
 
     N = size(J, 1)
     J_new = copy(J)
@@ -59,16 +59,19 @@ function recover_global_minimum(J;
         σ = rand([-1,1], N)
         E = SH.energy(J, σ) / N
 
-        function report(r, t)
-            println("restart=1, trial=$t: E=$(E) E=$(Efinal)")
-        end
+        #function report(r, t)
+        #    println("restart=1, trial=$t: E=$(E) E=$(Efinal)")
+        #end
 
         # verbose > 0 && report(r, 0)
         for t in 1:ntrials
             σnew = SH.monte_carlo(J_new, σ; nsweeps, earlystop = 0, β = 10, annealing)
             σnew = SH.monte_carlo(J, σnew; nsweeps, earlystop = 0, β = 10, annealing)
             Enew = SH.energy(J, σnew) / N
-            @info "restart=$(r) trial=$(t)" E Enew SH.overlap(σ, σnew) Efinal
+            
+            if info
+                @info "restart=$(r) trial=$(t)" E Enew SH.overlap(σ, σnew) Efinal
+            end
             if Enew > E
                 break
             end
@@ -94,22 +97,24 @@ function experiment_global_minimum(;
         nrestarts = 1,
         annealing = false,
         λ = 1.,
-        seed = -1)
+        seed = -1,
+        info = false)
 
     seed > 0 && Random.seed!(seed)
     M = round(Int, N * α)
     ξ = SH.generate_patterns(M, N)
     J = SH.store(ξ)
 
-    σ, E = recover_global_minimum(J; nsweeps, nrestarts, ntrials, annealing, λ, verbose=1)
+    σ, E = recover_global_minimum(J; nsweeps, nrestarts, ntrials, annealing, λ, info)
     overlaps = (σ' * ξ) ./ N
-    @show overlaps maximum(abs, overlaps)
+    #@show overlaps maximum(abs, overlaps)
     success = maximum(abs, overlaps) >= 0.95
     return success
 end
 
-function one_infer_probability(α::Float64, NN::AbstractVector, nsamples::Int;
-    nsweeps = 100, ntrials = 1, β = 10^4, earlystop = 0, annealing = false)
+function one_factorization_probability(; α::Float64 = 0.04, NN::AbstractVector = [100, 200, 300, 400, 500], nsamples::Int = 200,
+    nsweeps = 100, nrestarts = 1, ntrials = 1, 
+    λ = 1., β = 10^4, annealing = false)
 
     len_N = length(NN)
     probs = zeros(len_N)
@@ -120,11 +125,9 @@ function one_infer_probability(α::Float64, NN::AbstractVector, nsamples::Int;
         probs_over_samples = zeros(nsamples)
         
         for sample in 1:nsamples
-            
-            m_new = matrix_factorization_experiment(N = n, α = α, nsweeps = nsweeps
-                , ntrials = ntrials, annealing = annealing)
-            #print(m_new)
-            if m_new == 1
+            success = experiment_global_minimum(; N = n, α = α, nsweeps = nsweeps, ntrials = ntrials,
+            nrestarts = nrestarts, annealing = annealing, λ = λ, seed = -1)
+            if success
                 probs_over_samples[sample] = 1
             end
         end
@@ -134,31 +137,33 @@ function one_infer_probability(α::Float64, NN::AbstractVector, nsamples::Int;
     return probs, error_bars
 end
 
-function infer_probability(αα::AbstractVector, NN::AbstractVector;
-    nsamples = 500, nsweeps = 100, ntrials = 1, β = 10^4, earlystop = 0, annealing = false, show = false, save = true)
+function factorization_probability(αα::AbstractVector, NN::AbstractVector;
+    nsamples = 500, nrestarts = 1, nsweeps = 100, ntrials = 1, λ = 1., β = 10^4,
+    annealing = false, show = false, save = true, rootdir = "./")
 
     for α in αα
-    prob, error = one_infer_probability(α, NN, nsamples; nsweeps, ntrials, β, earlystop, annealing) 
-
+        probs, errors = one_factorization_probability(; α = α, NN = NN, nsamples = nsamples,
+        nsweeps = nsweeps, nrestarts = nrestarts, ntrials = ntrials,
+        β = β, λ = λ, annealing = annealing) 
 
         if show 
-            fig = plot(NN, prob, size = (500,300), markershape =:circle, label = "α = $α",
-                yerrors = error, xlabel = "N", ylabel = "P_infer")
+            fig = plot(NN, probs, size = (500,300), markershape =:circle, label = "α = $α",
+                yerrors = errors, xlabel = "N", ylabel = "P_infer")
             display(fig)
         end
         
         if save
             folder = replace(string(α),"." => "" )
-            path = "julia_data/alpha_"*folder
+            path = rootdir*"julia_data/alpha_"*folder
 
             if isdir(path)
                 io = open(path*"/data.txt", "w") do io
-                    writedlm(io, [NN prob error])
+                    writedlm(io, [NN probs errors])
                 end
             else
                 mkdir(path)
                 io = open(path*"/data.txt", "w") do io
-                    writedlm(io, [NN prob error])
+                    writedlm(io, [NN probs erros])
                 end
             end
             

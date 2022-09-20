@@ -87,7 +87,7 @@ function reconstruction_probability(NN::AbstractVector,
 end
 
 function hist_overlaps(;
-        α = 0.05, N = 1000, bins = 60, nsweeps = 100,
+        α = 0.05, N = 1000, nbins = 60, nsweeps = 100,
          earlystop = 0, β = 10, annealing = false)
     
     M = round(Int, N*α)
@@ -98,7 +98,7 @@ function hist_overlaps(;
     σ_new = SH.monte_carlo(J, σ; nsweeps = nsweeps, earlystop = earlystop, β = β, annealing = annealing)
 
     overlaps = (σ_new' * ξ) ./ N
-    fig = histogram(overlaps', bins = bins)
+    fig = histogram(overlaps', nbins = nbins, label = "N = $N, α = $α", xlabel = "overlap")
     display(fig)
     
     return
