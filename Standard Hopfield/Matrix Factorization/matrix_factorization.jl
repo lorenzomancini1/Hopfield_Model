@@ -170,3 +170,17 @@ function factorization_probability(αα::AbstractVector, NN::AbstractVector;
         end
     end
 end
+
+function stopping_time(; α = 0.04, N = 100, maxsweeps = 10^3)
+    stop = 1
+    
+    for nsweeps in range(start = 10, step = 10, stop = 10^3)
+        p, _ = one_factorization_probability(; NN = [N], α = α, β = 10^8, nsamples = 500,
+        nsweeps = nsweeps, annealing = true)
+        stop = nsweeps
+        if p[1] >= 0.98
+            break
+        end
+    end
+    return stop
+end
