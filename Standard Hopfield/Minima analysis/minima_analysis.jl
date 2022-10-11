@@ -39,4 +39,20 @@ if save
 end
 
 return overlaps
+
+function generate_intermediate_patterns(σ1, σ2)#, J)
+    diff = findall(x -> x == -1, σ1 .* σ2)
+    #energies = zeros(length(diff) + 2)
+    #energies[1] = SH.energy(J, σ1)
+    #energies[end] = SH.energy(J, σ2)
+    new_patterns = zeros(N, length(diff))
+    σ_new = copy(σ1)
+    for i in 1:length(diff)
+        σ_new[diff[i]] *= -1
+        new_patterns[:, i] = σ_new
+        #println(SH.overlap(σ_new, σ1))
+        #energies[i+1] = SH.energy(J, σ_new)
+    end
+    return new_patterns
+end
 end
