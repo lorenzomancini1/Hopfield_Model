@@ -66,4 +66,6 @@ def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data", plot_fit = 
 if __name__ == "__main__":
     NN = [50, 100, 150, 200, 1000]
     α = 0.1
-    compute_pc(α, NN, plot_fit= False, plot_reg = True)
+    compute_pc(α, NN, plot_fit= False, plot_reg = False)
+
+

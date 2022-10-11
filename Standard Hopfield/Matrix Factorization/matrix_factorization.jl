@@ -140,7 +140,7 @@ end
 function factorization_probability(αα::AbstractVector, NN::AbstractVector;
     nsamples = 500, nrestarts = 1, nsweeps = 100, ntrials = 1, λ = 1., β = 10^4,
     annealing = false, show = false, save = true, rootdir = "./")
-
+    probs = zeros(length(NN))
     for α in αα
         probs, errors = one_factorization_probability(; α = α, NN = NN, nsamples = nsamples,
         nsweeps = nsweeps, nrestarts = nrestarts, ntrials = ntrials,
@@ -154,7 +154,7 @@ function factorization_probability(αα::AbstractVector, NN::AbstractVector;
         
         if save
             folder = replace(string(α),"." => "" )
-            path = rootdir*"julia_data/alpha_"*folder
+            path = rootdir*"julia_data/factorization_prob/alpha_"*folder
 
             if isdir(path)
                 io = open(path*"/data.txt", "w") do io
@@ -169,12 +169,18 @@ function factorization_probability(αα::AbstractVector, NN::AbstractVector;
             
         end
     end
+    return probs
 end
 
-function stopping_time(; α = 0.04, N = 100, maxsweeps = 10^3)
+function stopping_time(; α = 0.04, N = 100, maxsweeps = 10^3,
+    save = false, rootdir="./")
+
     stop = 1
     
-    for nsweeps in range(start = 10, step = 10, stop = 10^3)
+    sweeps_range = 10 .^ range( log10(10), log10(maxsweeps), length = 100 )
+    sweeps_range = round.(Int, sweeps_range)
+
+    for nsweeps in sweeps_range#range(start = 10, step = 10, stop = 10^3)
         p, _ = one_factorization_probability(; NN = [N], α = α, β = 10^8, nsamples = 500,
         nsweeps = nsweeps, annealing = true)
         stop = nsweeps
@@ -182,5 +188,85 @@ function stopping_time(; α = 0.04, N = 100, maxsweeps = 10^3)
             break
         end
     end
+
+    if save
+        folder = replace(string(α),"." => "" )
+        path = rootdir*"julia_data/stopping_times/alpha_"*folder
+
+        if isdir(path)
+            io = open(path*"/stop"*"$N"*".txt", "w") do io
+                writedlm(io, [stop])
+            end
+        else
+            mkdir(path)
+            io = open(path*"/stop"*"$N"*".txt", "w") do io
+                writedlm(io, [stop])
+            end
+        end
+        
+    end
     return stop
+end
+
+function compute_norm(J1, σ, N, M)
+    ξ = reshape(σ, (N, M))
+    J2 = SH.store(ξ)
+    d = norm(J1 - J2)
+    return d
+end
+
+function initialize!(J, M, N)
+    idxs = findall(x->x != 0, J)
+    ξ_new = SH.generate_patterns(M, N)
+    length(idxs)
+    for idx in 1:round(Int, length(idxs)/2)
+        i = idxs[idx][1]
+        j = idxs[idx][2]
+        if J[i, j] < 0
+           for p in 1:M 
+                ξ_new[j ,p] = -ξ_new[i, p]
+            end
+        else
+            for p in 1:M 
+                ξ_new[j ,p] = ξ_new[i, p] 
+            end
+        end
+    end
+
+    return reshape(ξ_new, (N*M))
+end
+
+function one_matrix_sweep!(J, σ, N, M, d_in)
+    n_neurons = N*M
+    flip = 0
+    for i in 1:n_neurons
+        k = rand(1:n_neurons)
+        σ[k] *= -1
+        d = compute_norm(J, σ, N, M)
+        if d < d_in
+            d_in = d
+            flip += 1
+        else
+            σ[k] *= -1 #reject the flip
+        end
+    end
+    return σ, d_in, flip/n_neurons
+end
+
+function matrix_monte_carlo(J::AbstractMatrix, M::Int; nsweeps = 100, earlystop = 0)
+    N = size(J, 1)
+    # instead of considering a matrix ξ of size (N, M), we consider a vector of size
+    # (N*M, 1)
+    σ = rand([-1, 1], N*M)
+    
+    distances = zeros(nsweeps + 1)
+    d_in = compute_norm(J, σ, N, M)
+    # then we run the Monte Carlo on this "pattern"
+    distances[1] = d_in
+    for i in 1:nsweeps
+        σ, d_in, fliprate = one_matrix_sweep!(J, σ, N, M, d_in)
+        distances[i+1] = d_in
+        fliprate <= earlystop && break
+    end
+    return reshape(σ, (N, M)), distances
 end

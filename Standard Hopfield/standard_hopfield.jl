@@ -30,7 +30,7 @@ function perturb(σ::AbstractVector, p)
     return σ_new
 end
 
-function store(ξ::AbstractMatrix)
+function store(ξ)
     N = size(ξ, 1)
     J = ξ * ξ'
     J[diagind(J)] .= 0
