@@ -5,15 +5,7 @@ In this repository we provide numerical simulations to investigate the basins of
 ## Quick Start
 In the Hopfield Model we're able to store M binary (and also continuous in the Modern version) patterns, i.e. a configuration of neurons $\xi = [-1,1]^N$, where N is the size of the system.
 The storage process consists in assigning a low energy to the patterns that we want to store.
-For the Standard Hopfield model, this is all encoded in the coupling matrix $J$ constructed following the Hebb's rule: $J_{ij} = \sum_{\mu = 1}^{M} \xi_{i}^{\mu} \xi_{j}^{\mu} /N .$
-Having defined the coupling matrix in this way, we can compute the energy of any binary configuration $\sigma$ as: $E(\{\sigma\}) = \sum_{i, j = 1}^{N} J_{ij} \sigma_i \sigma_j / 2.$
-If we feed the model with a perturbed pattern, we're able to reconstruct the original one just by energy minimization.
-In the `standard_hopfield.jl` the related functions are :
 
-- `generate_patterns`, generates M random binary patterns of length N;
-- `store`, creates the matrix $J$;
-- `energy`, computes the energy of a given configuration;
-- `perturb`, flips each spin of a configuration with probability $p$.
 ### Monte Carlo algorithm
 The energy minimization is performed exploiting the Metropolis-Hasting algorithm.
 In particular, given a configuration $\sigma$:
@@ -21,13 +13,6 @@ In particular, given a configuration $\sigma$:
 - select a random spin;
 - if the energy variation related to the flip is $< 0$ we accept the flip; otherwise we accept the flip only with probability given by $exp(-\beta \Delta E )$, where $\Delta E$ is the change in energy and $\beta$ is the inverse of the temperature;
 - repeat N times.
-
-The steps just described make up a Monte Carlo sweep. In order to minimize energy we run the simulations with many sweeps.
-The functions related to this part are:
-
-- `energy_variation`, computes the change in energy which would occur with a flip of the i-th spin;
-- `metropolis`, this is just the algorithm described above;
-- `monte_carlo`, runs the metropolis `nsweeps` times.
 
 ## Critical noise
 One important question related to the basins of attractions of the Hopfield Model is: how much can we perturb a pattern in order to be able to reconstruct it?
