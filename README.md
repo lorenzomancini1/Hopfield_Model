@@ -5,14 +5,8 @@ In this repository we provide numerical simulations to investigate the basins of
 ## Quick Start
 In the Hopfield Model we're able to store M binary (and also continuous in the Modern version) patterns, i.e. a configuration of neurons $\xi = [-1,1]^N$, where N is the size of the system.
 The storage process consists in assigning a low energy to the patterns that we want to store.
-For the Standard Hopfield model, this is all encoded in the coupling matrix $J$ constructed following the Hebb's rule:
-$$
-J_{ij} = \frac{1}{N} \sum_{\mu = 1}^{M} \xi_{i}^{\mu} \xi_{j}^{\mu}.
-$$
-Having defined the coupling matrix in this way, we can compute the energy of any binary configuration $\sigma$ as:
-$$
-E(\{\sigma\}) = \frac{1}{2} \sum_{i, j = 1}^{N} J_{ij} \sigma_i \sigma_j.
-$$
+For the Standard Hopfield model, this is all encoded in the coupling matrix $J$ constructed following the Hebb's rule: $J_{ij} = \sum_{\mu = 1}^{M} \xi_{i}^{\mu} \xi_{j}^{\mu} /N .$
+Having defined the coupling matrix in this way, we can compute the energy of any binary configuration $\sigma$ as: $E(\{\sigma\}) = \sum_{i, j = 1}^{N} J_{ij} \sigma_i \sigma_j / 2.$
 If we feed the model with a perturbed pattern, we're able to reconstruct the original one just by energy minimization.
 In the `standard_hopfield.jl` the related functions are :
 
