@@ -9,8 +9,9 @@ def reg_func(x, q, a, b): return q + a*x**(-1) + b*x**(-2)
     
 def plotfit(pp, N, P_N, popt):
     fig = plt.figure(figsize = (6, 5))
+    x = np.linspace(min(pp), max(pp), 300)
     plt.plot(pp, P_N, label = "simulation", marker = "o", color = "black", linestyle = "None", markerfacecolor = "None")
-    plt.plot(pp, np.exp(popt[0] + (popt[1] * pp) + (popt[2] * pp**2) + (popt[3] * pp**3) + (popt[4] * pp**4) + (popt[5] * pp**5) + (popt[6] * pp**6)),
+    plt.plot(x, np.exp(popt[0] + (popt[1] * x) + (popt[2] * x**2) + (popt[3] * x**3) + (popt[4] * x**4) + (popt[5] * x**5) + (popt[6] * x**6)),
              label = "fit", color = "red", linewidth = 1.)
     plt.ylabel("Reconstruction prob.", size = 12)
     plt.xlabel("p", size = 12)

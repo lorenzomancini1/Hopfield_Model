@@ -48,7 +48,7 @@ end
 
 function reconstruction_probability(NN::AbstractVector,
     α;
-    pp::AbstractVector = range( 0.08, 0.58, length = 22 ),
+    pp::AbstractVector = range( 0.14, 0.56, length = 22 ),
     nsweeps = 100,
     β = 10^3,
     nsamples = 5*10^2,
