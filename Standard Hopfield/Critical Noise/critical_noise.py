@@ -10,9 +10,9 @@ def reg_func(x, q, a, b): return q + a*x**(-1) + b*x**(-2)
 def plotfit(pp, N, P_N, popt):
     fig = plt.figure(figsize = (6, 5))
     plt.plot(pp, P_N, label = "simulation", marker = "o", color = "black", linestyle = "None", markerfacecolor = "None")
-    plt.plot(pp, np.exp(popt[0] + popt[1] * pp + popt[2] * pp**2 + popt[3] * pp**3 + popt[4] * pp**4),
+    plt.plot(pp, np.exp(popt[0] + (popt[1] * pp) + (popt[2] * pp**2) + (popt[3] * pp**3) + (popt[4] * pp**4) + (popt[5] * pp**5) + (popt[6] * pp**6)),
              label = "fit", color = "red", linewidth = 1.)
-    plt.ylabel("P_reconst", size = 12)
+    plt.ylabel("Reconstruction prob.", size = 12)
     plt.xlabel("p", size = 12)
     plt.title("N = {}".format(N), size = 12)
     plt.legend()
@@ -20,27 +20,30 @@ def plotfit(pp, N, P_N, popt):
     plt.show()
     return
 
-def plotreg(N_reciproc, pcN, popt):
+def plotreg(N_reciproc, pcN, popt, α):
     fig = plt.figure(figsize = (7,5))
+    x = np.linspace(0, 0.01, 300)
     plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
              linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = 0.1)$")
-    plt.plot(N_reciproc, popt[0] + popt[1]*N_reciproc + popt[2] * N_reciproc**2, linestyle = "--", c = "red",
-             linewidth = 1., label = r"intercept $p_c(\alpha = 0.1) \sim$ {}".format(round(popt[0], 3)))
+    plt.plot(x, popt[0] + popt[1]*x + popt[2] * x**2, c = "blue",
+             linewidth = 1., label = r"intercept $p_c(\alpha = {}) \sim$ {}".format(α, round(popt[0], 3)))
     #plt.xlabel(r"1/$\sqrt{N}$", size = 12)
     plt.ylabel(r"$p_c(N, \alpha = 0.1)$", size = 12)
+    plt.xlabel(r"$\frac{1}{N}$", size = 12)
     plt.grid(axis = "both", linestyle = "--", alpha = 0.5)
     plt.title("Finite size scaling", size = 12)
     plt.legend(fontsize = 12)
     plt.show()
     return
 
-def P_rec(p, q, a, b, c, d): return np.exp(q + a * p + b * p**2 + c * p**3 + d * p**4)
+def P_rec(p, q, a, b, c, d, e, f): return np.exp(q + (a * p) + (b * p**2) + (c * p**3) + (d * p**4) + (e * p**5) + (f * p**6))
 
-def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data", plot_fit = False, plot_reg = False, thr = 0.5):
+def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data/reconstruction_prob", plot_fit = False, plot_reg = False, thr = 0.5):
     
     pcN = []
     folder = str(α).replace(".", "")
     pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
+        
     for N in NN:
         
         P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 1]
@@ -49,7 +52,8 @@ def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data", plot_fit = 
         if plot_fit: plotfit(pp, N, P_N, popt)                        
         
         # find the value of p that makes P_rec = 0.5
-        sol = optimize.root_scalar(lambda p: np.exp(popt[0] + popt[1] * p + popt[2] * p**2 + popt[3] * p**3 + popt[4] * p**4) - thr,
+        sol = optimize.root_scalar(lambda p: np.exp(popt[0] + popt[1] * p + popt[2] * p**2 + popt[3] * p**3 + 
+                                                    popt[4] * p**4 + popt[5] * p**5 + popt[6] * p**6) - thr,
         x0 = 0.3, bracket = [0.15, 0.45], method='brentq')
     
         pcN.append(sol.root)
@@ -58,7 +62,7 @@ def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data", plot_fit = 
     N_reciproc = np.array(list(map(lambda n: 1/n, NN)))#[::-1]
     popt, pcov = curve_fit(reg_func, NN, pcN)
     
-    if plot_reg: plotreg(N_reciproc, pcN, popt)
+    if plot_reg: plotreg(N_reciproc, pcN, popt, α)
         
         
     return pcN, popt[0]
