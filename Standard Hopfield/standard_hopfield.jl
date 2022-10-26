@@ -30,6 +30,16 @@ function perturb(σ::AbstractVector, p)
     return σ_new
 end
 
+function generate_corr_patterns(M, N, q)
+    ξ = zeros(M, N)' # initialize ξ
+    σ = init_pattern(N)
+    ξ[:, 1] = σ # generate the first init_pattern
+    for m in 2:M
+        ξ[:, m] = perturb(σ, (1-q)/2)
+    end
+    return ξ
+end
+
 function store(ξ)
     N = size(ξ, 1)
     J = ξ * ξ'

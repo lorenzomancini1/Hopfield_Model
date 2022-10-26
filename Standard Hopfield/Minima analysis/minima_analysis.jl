@@ -39,6 +39,7 @@ if save
 end
 
 return overlaps
+end
 
 function generate_intermediate_patterns(σ1, σ2)#, J)
     diff = findall(x -> x == -1, σ1 .* σ2)
@@ -55,4 +56,4 @@ function generate_intermediate_patterns(σ1, σ2)#, J)
     end
     return new_patterns
 end
-end
+

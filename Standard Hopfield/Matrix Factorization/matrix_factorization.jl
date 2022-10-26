@@ -1,4 +1,5 @@
 include("../standard_hopfield.jl")
+include("../../Modern Hopfield/continuous/continuous_hopfield.jl")
 using Statistics, LinearAlgebra, Plots
 using DelimitedFiles, Random
 using ProfileView
@@ -78,7 +79,7 @@ function recover_global_minimum(J;
             σ = σnew
             E = Enew
             J_new -= λ * σnew * σnew' ./ N
-            # verbose > 0 && report(t)
+            J_new[diagind(J_new)] .= 0             # verbose > 0 && report(t)
         end
         if E < Efinal
             σfinal = σ
@@ -208,9 +209,14 @@ function stopping_time(; α = 0.04, N = 100, maxsweeps = 10^3,
     return stop
 end
 
-function compute_norm(J1, σ, N, M)
+function compute_norm(J1::AbstractMatrix, σ::AbstractVector, N::Int, M::Int; diagonal = true)
     ξ = reshape(σ, (N, M))
-    J2 = SH.store(ξ)
+    if diagonal
+      J2 = SH.store(ξ)
+    else
+      J2 = (ξ * ξ') ./ N
+    end
+
     d = norm(J1 - J2)
     return d
 end
@@ -236,14 +242,15 @@ function initialize!(J, M, N)
     return reshape(ξ_new, (N*M))
 end
 
-function one_matrix_sweep!(J, σ, N, M, d_in)
+function one_matrix_sweep!(J, σ, N, M, d_in; β = 10^8, diagonal = true)
     n_neurons = N*M
     flip = 0
     for i in 1:n_neurons
         k = rand(1:n_neurons)
         σ[k] *= -1
-        d = compute_norm(J, σ, N, M)
-        if d < d_in
+        d = compute_norm(J, σ, N, M; diagonal = diagonal)
+        Δd = d - d_in
+        if Δd < 0 || rand() < exp(-β*Δd)
             d_in = d
             flip += 1
         else
@@ -253,7 +260,7 @@ function one_matrix_sweep!(J, σ, N, M, d_in)
     return σ, d_in, flip/n_neurons
 end
 
-function matrix_monte_carlo(J::AbstractMatrix, M::Int; nsweeps = 100, earlystop = 0)
+function matrix_monte_carlo(J::AbstractMatrix, M::Int; nsweeps = 100, earlystop = 0, β = 10^8, diagonal = true, annealing = false)
     N = size(J, 1)
     # instead of considering a matrix ξ of size (N, M), we consider a vector of size
     # (N*M, 1)
@@ -263,10 +270,52 @@ function matrix_monte_carlo(J::AbstractMatrix, M::Int; nsweeps = 100, earlystop 
     d_in = compute_norm(J, σ, N, M)
     # then we run the Monte Carlo on this "pattern"
     distances[1] = d_in
-    for i in 1:nsweeps
-        σ, d_in, fliprate = one_matrix_sweep!(J, σ, N, M, d_in)
-        distances[i+1] = d_in
-        fliprate <= earlystop && break
+
+    if annealing
+      Tf = 1 / β
+      T = range(100, Tf, length = nsweeps)
+      β_n = 1 ./ T
+
+      for i in 1:nsweeps
+        σ, d_in, fliprate = one_matrix_sweep!(J, σ, N, M, d_in; diagonal = diagonal, β = β_n[i]  )
+          distances[i+1] = d_in
+          fliprate <= earlystop && break
+      end
+    else
+      for i in 1:nsweeps
+          σ, d_in, fliprate = one_matrix_sweep!(J, σ, N, M, d_in; diagonal = diagonal)
+          distances[i+1] = d_in
+          fliprate <= earlystop && break
+      end
     end
-    return reshape(σ, (N, M)), distances
+
+    ξ_rec = reshape(σ, (N, M))
+    J_rec = SH.store(ξ_rec)
+    success = J_rec == J
+    return ξ_rec, distances, success
+end
+
+function potential(σi)
+    return (σi - 1)^2 * (σi + 1)^2   
+end
+
+function loss(σ, J; λ = 1)
+    return (σ' * J * σ)/2 + λ * sum(map(potential, σ))
+end
+
+function loss_gradient(σ, J; λ = 1)
+   return (J * σ) + λ * map(x -> 2*(x-1)*(x+1)^2 + 2*(x-1)^2*(x+1), σ) 
+end
+
+function gradient_descent(σ, J; nsteps = 100, λ = 1, γ = 0.05)
+    λλ = range(λ, 10^(0), length = nsteps)
+    γγ = range(γ, 10^(-4), length = nsteps)
+    println(loss(σ, J))
+    
+    for i in 1:nsteps
+        σ -= γγ[i] * loss_gradient(σ, J; λ = λλ[i])
+        #σ -= loss_gradient1(σ, J)
+        println(loss(σ, J))
+    end
+    return σ
 end
