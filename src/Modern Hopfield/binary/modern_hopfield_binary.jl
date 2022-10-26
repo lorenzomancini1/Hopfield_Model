@@ -1,6 +1,7 @@
 module MHB
 
 using Random, Statistics, LinearAlgebra
+using KahanSummation
 
 export init_pattern, overlap, generate_patterns, perturb, energy, energy_variation, metropolis, monte_carlo
 
@@ -32,15 +33,18 @@ function perturb(σ::AbstractVector, p)
     return σ_new
 end
 
+function logsumexp(x::AbstractVector)
+    imax = argmax(x)
+    xmax = x[imax]
+    ws = exp.(x .- xmax)
+    ws[imax] = 0 # in order to se log1p later
+    return xmax + log1p(sum_kbn(ws))
+end
 
 function energy(σ::AbstractVector, ξ::AbstractMatrix, λ = 1)
-    M = size(ξ, 2)
-    se = 0
-    for μ in 1:M
-        se += exp(λ * overlap(σ, ξ[:, μ]) )
-    end
-    E = - log(se)/λ
-    return E
+    qs = λ .* vec(σ' * ξ)
+    lse = logsumexp(qs)
+    return - lse / λ
 end
 
 function energy_variation(σ, ξ, i, λ = 1)
@@ -51,28 +55,28 @@ end
 
 
 function metropolis(σ::AbstractVector, ξ::AbstractMatrix, β = 10, λ = 1)
-    
-    N = length(σ)
-    M = size(ξ, 2)
+    N, M = size(ξ)
     fliprate = 0
-    
-    for n in 1:N
-        i = rand(1:N)
-            
-        ΔE = energy_variation(σ, ξ, i, λ)
-        
-        if ΔE < 0 || rand() < exp( - β * ΔE)
-            σ[i] *= -1
+    E = energy(σ, ξ, λ)
+    for i in randperm(N)
+        σ[i] *= -1
+        Enew = energy(σ, ξ, λ)
+        ΔE = Enew - E
+        if rand() < exp( - β * ΔE)
             fliprate += 1
+            E = Enew
+        else
+            σ[i] *= -1
         end
     end
     
-    return σ, fliprate/N
+    return σ, fliprate / N
 end
 
-function monte_carlo(σ::AbstractVector, ξ::AbstractMatrix;
-     nsweeps = 100, earlystop = 0, β = 10^5, λ = 1)
-    
+function monte_carlo(σ0::AbstractVector, ξ::AbstractMatrix;
+                    nsweeps = 100, earlystop = 0, β = 10^5, λ = 1)
+
+    σ = deepcopy(σ0)
     for sweep in 1:nsweeps
         σ, fliprate = metropolis(σ, ξ, β, λ)
         fliprate <= earlystop && break
@@ -80,4 +84,5 @@ function monte_carlo(σ::AbstractVector, ξ::AbstractMatrix;
     return σ
 end
 
-end
+
+end # end module
