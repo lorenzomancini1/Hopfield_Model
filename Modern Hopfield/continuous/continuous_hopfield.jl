@@ -10,8 +10,8 @@ function init_pattern(N)
     return σ
 end
 
-function overlap(σ1::AbstractVector, σ2::AbstractVector)
-    return σ1 ⋅ σ2
+function distance(σ1::AbstractVector, σ2::AbstractVector)
+    return norm(σ1 - σ2)
 end
 
 function generate_patterns(M, N)
@@ -49,7 +49,8 @@ function energy(σ::AbstractVector, ξ::AbstractMatrix; β = 10, γ=1)
 end
 
 function softmax(x)
-    return exp.(x) ./ sum(exp.(x)) 
+    m = maximum(x)
+    return exp.(x .- m) ./ sum(exp.(x)) 
 end
 
 function update(σ, ξ; β = 1, nsweeps = 1)
