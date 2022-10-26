@@ -73,9 +73,10 @@ function metropolis(σ::AbstractVector, ξ::AbstractMatrix, β = 10, λ = 1)
     return σ, fliprate / N
 end
 
-function monte_carlo(σ::AbstractVector, ξ::AbstractMatrix;
-     nsweeps = 100, earlystop = 0, β = 10^5, λ = 1)
-    
+function monte_carlo(σ0::AbstractVector, ξ::AbstractMatrix;
+                    nsweeps = 100, earlystop = 0, β = 10^5, λ = 1)
+
+    σ = deepcopy(σ0)
     for sweep in 1:nsweeps
         σ, fliprate = metropolis(σ, ξ, β, λ)
         fliprate <= earlystop && break
@@ -83,4 +84,5 @@ function monte_carlo(σ::AbstractVector, ξ::AbstractMatrix;
     return σ
 end
 
-end
+
+end # end module
