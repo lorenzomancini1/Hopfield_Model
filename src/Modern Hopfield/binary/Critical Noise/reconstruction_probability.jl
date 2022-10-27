@@ -8,15 +8,15 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
     thr = 0.95,
     λ = 1)
 
-    M = round(Int, N * α)
+    M = round(Int, exp(N * α)) #compute M
 
-    len_pp = length(pp)
-    probs = zeros(len_pp)
-    error_bars = zeros(len_pp)
-    magnetization = zeros(len_pp)
+    len_pp = length(pp) # number of p to compute
+    probs = zeros(len_pp) # initialize array for reconstruction frequencies
+    error_bars = zeros(len_pp) # initialize array for errors
+    magnetization = zeros(len_pp) # initialize array for magnetization
 
-    for i in 1:len_pp
-        probs_over_samples = zeros(nsamples)        
+    for i in 1:len_pp # loop over perturb probabilities
+        success = zeros(nsamples) # array to contain the number of successes      
         #count = 0
         ms = zeros(nsamples)
         
@@ -32,16 +32,16 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
                                     nsweeps = nsweeps, earlystop = earlystop,
                                     β = β, λ = λ)
             
-            m = MHB.overlap(σ_rec, σ)
+            m = MHB.overlap(σ_rec, σ) / N
             #print(m)
             if m >= thr
-                probs_over_samples[sample] = 1
+                success[sample] = 1
                 #count += 1
             end
             ms[sample] = m
         end
-        probs[i] = Statistics.mean(probs_over_samples)
-        error_bars[i] = Statistics.std(probs_over_samples)/sqrt(nsamples)
+        probs[i] = Statistics.mean(success)
+        error_bars[i] = Statistics.std(success)/sqrt(nsamples)
         magnetization[i] = Statistics.mean(ms)
     end
 
@@ -66,7 +66,7 @@ function reconstruction_probability(NN::AbstractVector,
 
         if show
             fig = plot(pp, prob, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
-            yerrors = error, xlabel = "p", ylabel = "P_reconst") 
+            xlabel = "p", ylabel = "P_reconst") 
             display(fig)        
         end
 

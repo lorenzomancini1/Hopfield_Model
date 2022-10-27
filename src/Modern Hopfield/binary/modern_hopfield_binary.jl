@@ -54,7 +54,7 @@ function energy_variation(σ, ξ, i, λ = 1)
 end
 
 
-function metropolis(σ::AbstractVector, ξ::AbstractMatrix, β = 10, λ = 1)
+function metropolis!(σ::AbstractVector, ξ::AbstractMatrix, β = 10, λ = 1)
     N, M = size(ξ)
     fliprate = 0
     E = energy(σ, ξ, λ)
@@ -74,11 +74,11 @@ function metropolis(σ::AbstractVector, ξ::AbstractMatrix, β = 10, λ = 1)
 end
 
 function monte_carlo(σ0::AbstractVector, ξ::AbstractMatrix;
-                    nsweeps = 100, earlystop = 0, β = 10^5, λ = 1)
+                    nsweeps = 100, earlystop = 0, β = 10, λ = 1)
 
     σ = deepcopy(σ0)
     for sweep in 1:nsweeps
-        σ, fliprate = metropolis(σ, ξ, β, λ)
+        σ, fliprate = metropolis!(σ, ξ, β, λ)
         fliprate <= earlystop && break
     end
     return σ

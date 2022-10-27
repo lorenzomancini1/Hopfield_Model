@@ -2,23 +2,16 @@ include("../standard_hopfield.jl")
 using Statistics, LinearAlgebra, Plots
 using DelimitedFiles, Random
 
-function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples;
-    nsweeps = 100,
-    β = 10,
-    earlystop = 0,
-    thr = 0.95)
+function one_reconstruction_frequency(N::Int64, α::Float64, nsamples::Int64, pp::AbstractVector;
+    nsweeps = 100, β = 10, earlystop = 0, m0 = 0.8)
 
-    M = round(Int, N * α)
+    M  = round(Int, N * α)
+    np = length(pp)
 
-    len_pp = length(pp)
-    probs = zeros(len_pp)
-    error_bars = zeros(len_pp)
-    magnetization = zeros(len_pp)
+    freqs, ferrors, mags, merrors = zeros(np), zeros(np), zeros(np), zeros(np)
 
-    for i in 1:len_pp
-        probs_over_samples = zeros(nsamples)        
-        #count = 0
-        ms = zeros(nsamples)
+    for i in 1:np
+        overlaps = zeros(nsamples)
         
         for sample in 1:nsamples
             ξ = SH.generate_patterns(M, N)
@@ -27,61 +20,60 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
             k = rand(1:M)
             σ = ξ[:, k]
             σ_pert = SH.perturb(σ, pp[i])
-                        
-            σ_rec = SH.monte_carlo(J, σ_pert; nsweeps = nsweeps, earlystop = earlystop, β = β)
             
-            m = SH.overlap(σ_rec, σ)
-            #print(m)
-            if m >= thr
-                probs_over_samples[sample] = 1
-                #count += 1
-            end
-            ms[sample] = m
+            σ_rec = SH.monte_carlo(σ_pert, J; nsweeps = nsweeps, earlystop = earlystop, β = β)
+            overlaps[sample] = SH.overlap(σ_rec, σ)
         end
-        probs[i] = Statistics.mean(probs_over_samples)
-        error_bars[i] = Statistics.std(probs_over_samples)/sqrt(nsamples)
-        magnetization[i] = Statistics.mean(ms)
+        success   = map(x -> x >= m0, overlaps)
+        freqs[i]  = mean(success)
+        ferrors[i] = std(success) / sqrt(nsamples)
+        
+        mags[i]   = mean(overlaps)
+        merrors[i]= std(overlaps) / nsamples
     end
-
-    return probs, error_bars, magnetization
+    return freqs, ferrors, mags, merrors            
 end
 
-function reconstruction_probability(NN::AbstractVector,
-    α;
-    pp::AbstractVector = range( 0.14, 0.56, length = 22 ),
-    nsweeps = 100,
-    β = 10^3,
-    nsamples = 5*10^2,
-    earlystop = 0,
-    thr = 0.95,
-    show = false,
-    save = true)
+function plotf(N::Int, α::Float64, pp::AbstractVector, f::AbstractVector)
+    fig = plot(pp, f, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
+                    xlabel = "p", ylabel = "probs") 
+    display(fig)
+    return nothing
+end
 
-    for N in NN 
-        prob, error, mag = one_reconstruction_probability(N, pp, α, nsamples; 
-        nsweeps = nsweeps, β = β, earlystop = earlystop, thr = thr) 
+function savedata(N::Int, α::Float64, data::AbstractMatrix; dir = "julia_data")
 
-        if show
-            fig = plot(pp, prob, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
-            yerrors = error, xlabel = "p", ylabel = "P_reconst") 
-            display(fig)        
+    folder = replace(string(α),"." => "" )
+    path = dir*"/alpha_"*folder
+
+    if isdir(path)
+        io = open(path*"/N"*"$N"*".txt", "w") do io
+            writedlm(io, data)
         end
-
-        if save
-            folder = replace(string(α),"." => "" )
-            path = "julia_data/alpha_"*folder
-
-            if isdir(path)
-                io = open(path*"/probsN"*"$N"*".txt", "w") do io
-                    writedlm(io, [pp prob error mag])
-                end
-            else
-                mkdir(path)
-                io = open(path*"/probsN"*"$N"*".txt", "w") do io
-                    writedlm(io, [pp prob error mag])
-                end
-            end
+    else
+        mkpath(path)
+        io = open(path*"/N"*"$N"*".txt", "w") do io
+            writedlm(io, data)
         end
     end
-    return       
+    return nothing
+end
+
+function reconstruction_frequencies(dd::AbstractVector, αα::AbstractVector;
+    pp::AbstractVector = range( 0.14, 0.56, length = 22 ), m0 = 0.8, # one_rec_freq params
+    nsweeps = 100, β = 15, earlystop = 0, # monte carlo params
+    save = true, show = false, savedir = "julia_data")
+
+    for α in αα
+        for d in dd
+            N, nsamples = d[1], d[2]
+            f, ferr, m, merr = one_reconstruction_frequency(N, α, nsamples, pp; nsweeps = nsweeps, β = β, earlystop = earlystop, m0 = m0)
+            
+            data = [f ferr m merr]
+            show == true && plotf(N, α, pp, f)
+            save == true && savedata(N, α, data; dir = savedir)
+            
+        end    
+    end
+    return nothing
 end

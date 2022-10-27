@@ -47,7 +47,7 @@ function store(ξ)
     return J ./ N
 end
 
-function energy(J::AbstractMatrix, σ::AbstractVector)
+function energy( σ::AbstractVector, J::AbstractMatrix)
     return -(σ' * J * σ) / 2
 end
 
@@ -56,7 +56,7 @@ end
 #end
 
 # ~30% faster
-function energy_variation(J::AbstractMatrix, σ::AbstractVector, i::Int)
+function energy_variation(σ::AbstractVector, J::AbstractMatrix, i::Int)
     s = 0.0
     @tturbo for j in eachindex(σ)
         s += J[j, i] * σ[j]
@@ -70,13 +70,12 @@ end
 #     return 2 * σ[i] * s
 # end
 
-function metropolis(J, σ, β)
+function metropolis!(σ, J, β)
     N = length(σ)
     
     fliprate = 0
-    is = randperm(N)
-    for i in is
-        ΔE = energy_variation(J, σ, i)
+    for i in randperm(N)
+        ΔE = energy_variation(σ, J, i)
         
         if (ΔE < 0) || rand() < exp(-β*ΔE)
             σ[i] *= -1
@@ -86,22 +85,22 @@ function metropolis(J, σ, β)
     return σ, fliprate/N
 end
 
-function monte_carlo(J::AbstractMatrix, σ::AbstractVector; 
+function monte_carlo(σ::AbstractVector, J::AbstractMatrix; 
         nsweeps = 100, earlystop = 0, β = 10, annealing = false)
     
-    σ_rec = copy(σ)
+    σ_rec = deepcopy(σ)
 
     if annealing
         Tf  = 1 / β 
         T = range(2, Tf, length=nsweeps)
         β_n = 1 ./ T
         for β in β_n
-            σ_rec, fliprate = metropolis(J, σ_rec, β)
+            σ_rec, fliprate = metropolis!(σ_rec, J, β)
             fliprate <= earlystop && break
         end
     else
         for sweep in 1:nsweeps
-            σ_rec, fliprate = metropolis(J, σ_rec, β)
+            σ_rec, fliprate = metropolis!(σ_rec, J, β)
             fliprate <= earlystop && break
         end
     end

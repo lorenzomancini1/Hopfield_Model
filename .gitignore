@@ -5,3 +5,4 @@
 **/julia_data
 **/figures
 Manifest.toml
+*.bak
