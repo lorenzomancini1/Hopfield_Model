@@ -86,20 +86,28 @@ function metropolis!(σ, J, β)
 end
 
 function monte_carlo(σ::AbstractVector, J::AbstractMatrix; 
-        nsweeps = 100, earlystop = 0, β = 10, annealing = false)
+        nsweeps = 100, earlystop = 0, β = 10, annealing = 0)
     
     σ_rec = deepcopy(σ)
 
-    if annealing
+    if annealing == 1
         Tf  = 1 / β 
         T = range(2, Tf, length=nsweeps)
-        β_n = 1 ./ T
-        for β in β_n
+        βn = 1 ./ T
+        for β in βn
             σ_rec, fliprate = metropolis!(σ_rec, J, β)
             fliprate <= earlystop && break
         end
-    else
-        for sweep in 1:nsweeps
+    elseif annealing == 0
+        for _ in 1:nsweeps
+            σ_rec, fliprate = metropolis!(σ_rec, J, β)
+            fliprate <= earlystop && break
+        end
+    elseif annealing == -1
+        Ti = 1 / β
+        T = 10 .^ range( log10(Ti), log10(15), length = nsweeps )
+        βn = 1 ./ T
+        for β in βn
             σ_rec, fliprate = metropolis!(σ_rec, J, β)
             fliprate <= earlystop && break
         end

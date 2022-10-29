@@ -21,10 +21,12 @@ def plotfit(pp, N, P_N, popt):
     plt.show()
     return
 
-def plotreg(N_reciproc, pcN, popt, α):
+def plotreg(N_reciproc, pcN, pcNerr, popt, α):
     fig = plt.figure(figsize = (7,5))
     x = np.linspace(0, np.max(N_reciproc), 600)
-    plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
+    #plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
+    #         linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
+    plt.errorbar(N_reciproc, pcN, yerr = pcNerr, c = "black", marker = "o", markerfacecolor = "None",
              linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
     plt.plot(x, popt[0] + popt[1]*x + popt[2] * x**2, c = "blue",
              linewidth = 1., label = r"intercept $p_c(\alpha = {}) \sim$ {}".format(α, round(popt[0], 3)))
@@ -39,7 +41,15 @@ def plotreg(N_reciproc, pcN, popt, α):
 
 def P_rec(p, q, a, b, c, d, e, f): 
     return np.exp(q + (a * p) + (b * p**2) + (c * p**3) + (d * p**4) + (e * p**5) + (f * p**6)) # function to fit the reconstruction probability
- 
+
+def compute_error(p, params, vars):
+    pvec = np.array([p**i for i in range(0, 7)]) # 1, p, p^2, ..., p^6
+    den = np.sum(np.array([1, 2, 3, 4, 5, 6]) * params[1:] * pvec[:-1])
+    derivates = - pvec / den
+    error = np.linalg.norm( (derivates**2) * vars)
+    return error
+
+
 
 def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data/reconstruction_prob",
                plot_fit = False, plot_reg = False,
@@ -49,13 +59,14 @@ def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data/reconstructio
                xf = 0.45):
     
     pcN = []
+    pcNerr = []
     folder = str(α).replace(".", "")
-    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
+    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
         
     for N in NN:
         
-        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
-        e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
+        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
+        e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
         popt, pcov = curve_fit(P_rec, pp, P_N, maxfev = 5000) # fit the Probs data with the exponential defined in P_rec
         
         if plot_fit: plotfit(pp, N, P_N, popt) # show the fit                   
@@ -64,17 +75,17 @@ def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data/reconstructio
         sol = optimize.root_scalar(lambda p: np.exp(popt[0] + popt[1] * p + popt[2] * p**2 + popt[3] * p**3 + 
                                                     popt[4] * p**4 + popt[5] * p**5 + popt[6] * p**6) - thr,
         x0 = x_guess, bracket = [xi, xf], method='brentq') # find the value for p that makes the fit be equal to 0.5
-    
+        pcNerr.append(compute_error(sol.root, popt, np.diag(pcov)))
         pcN.append(sol.root) # store the result in the array
     
     pcN = pcN#[::-1] # this line can be deleted
     N_reciproc = np.array(list(map(lambda n: 1/n, NN)))#[::-1] # array of 1/N
     popt, pcov = curve_fit(reg_func, NN, pcN) # fit the results with reg_func
     
-    if plot_reg: plotreg(N_reciproc, pcN, popt, α) # show the result
+    if plot_reg: plotreg(N_reciproc, pcN, pcNerr, popt, α) # show the result
         
         
-    return pcN, popt[0]
+    return pcN, pcNerr, popt[0], np.sqrt(pcov[0,0])
 
 if __name__ == "__main__":
     NN = [50, 100, 150, 200, 1000]
