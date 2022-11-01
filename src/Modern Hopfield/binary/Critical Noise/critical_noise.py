@@ -3,15 +3,18 @@ import matplotlib.pyplot as plt
 from scipy import optimize
 from scipy.optimize import curve_fit, fsolve
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 
-def reg_func(x, q, a, b): return q + a*x**(-1) + b*x**(-2) # function for finite size scaling, i.e. fit the critical probabilities
-    
+def reg_func(x, *params): 
+    return sum([p*(x**(-i)) for i, p in enumerate(params)])
+
+def P_ret(x, *params): 
+    return np.exp(sum([p*(x**i) for i, p in enumerate(params)]))
+
 def plotfit(pp, N, P_N, popt):
     fig = plt.figure(figsize = (6, 5))
     x = np.linspace(min(pp), max(pp), 600)
     plt.plot(pp, P_N, label = "simulation", marker = "o", color = "black", linestyle = "None", markerfacecolor = "None")
-    plt.plot(x, np.exp(popt[0] + (popt[1] * x) + (popt[2] * x**2) + (popt[3] * x**3) + (popt[4] * x**4) + (popt[5] * x**5) + (popt[6] * x**6)),
+    plt.plot(x, np.exp(sum([p*(x**i) for i, p in enumerate(popt)])),
              label = "fit", color = "red", linewidth = 1.)
     plt.ylabel("Reconstruction prob.", size = 12)
     plt.xlabel("p", size = 12)
@@ -21,12 +24,21 @@ def plotfit(pp, N, P_N, popt):
     plt.show()
     return
 
-def plotreg(N_reciproc, pcN, popt, α):
+def plotreg(NN, pcN, pcNerr, popt, α, errorbar):
+    N_reciproc = np.array(list(map(lambda n: 1/n, NN)))
     fig = plt.figure(figsize = (7,5))
     x = np.linspace(0, np.max(N_reciproc), 600)
-    plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
-             linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
-    plt.plot(x, popt[0] + popt[1]*x + popt[2] * x**2, c = "blue",
+    #plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
+    #         linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
+    if errorbar:
+        plt.errorbar(N_reciproc, pcN, yerr = pcNerr, c = "black", marker = "o", markerfacecolor = "None",
+                linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
+    
+    else:
+        plt.plot(N_reciproc, pcN, c = "black", marker = "o", markerfacecolor = "None",
+                linewidth = 1., linestyle = "None", label = r"experimental $p_c(N, \alpha = {})$".format(α))
+    
+    plt.plot(x, sum([p*(x**(i)) for i, p in enumerate(popt)]), c = "blue",
              linewidth = 1., label = r"intercept $p_c(\alpha = {}) \sim$ {}".format(α, round(popt[0], 3)))
     #plt.xlabel(r"1/$\sqrt{N}$", size = 12)
     plt.ylabel(r"$p_c(N, \alpha = {})$".format(α), size = 12)
@@ -37,48 +49,52 @@ def plotreg(N_reciproc, pcN, popt, α):
     plt.show()
     return
 
-def P_rec(p, q, a, b, c, d, e, f): 
-    return np.exp(q + (a * p) + (b * p**2) + (c * p**3) + (d * p**4) + (e * p**5) + (f * p**6)) # function to fit the reconstruction probability
- 
+def compute_error(popt0, stds, x_guess, thr, nsamples = 10**4):
+    pc_distribution = np.zeros(nsamples)
+    #print(stds)
+    l = len(popt0)
+    for s in range(nsamples):
+        popt = np.zeros(l)
+        for i in range(l):
+            popt[i] = np.random.normal(loc = popt0[i], scale = stds[i])
+        root = fsolve(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, x0 = x_guess, maxfev = 5000)
+        pc_distribution[s] = root[0]
+    return np.std(pc_distribution)
 
-def compute_pc(α, NN, rootdir = "./", datadir = "workstation_data/reconstruction_prob",
+def compute_error_new(p, params, vars):
+    pvec = np.array([p**i for i in range(0, len(params))]) # 1, p, p^2, ...
+    den = np.sum(np.arange(1, len(params), 1) * params[1:] * pvec[:-1])
+    derivates = - pvec / den
+    error = np.linalg.norm( (derivates**2) * vars, 2)
+    return error
+
+def compute_pc(α, NN, rootdir = "./", datadir = "julia_data",
                plot_fit = False, plot_reg = False,
                thr = 0.5,
-               x_guess = 0.3,
-               xi = 0.15,
-               xf = 0.45):
+               x_guess = 0.3, dret = 6, dfss = 2,
+               errorbar = False):
     
     pcN = []
+    pcNerr = []
     folder = str(α).replace(".", "")
-    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
+    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
         
     for N in NN:
-        
-        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
-        e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/probsN{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
-        popt, pcov = curve_fit(P_rec, pp, P_N, maxfev = 5000) # fit the Probs data with the exponential defined in P_rec
+        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
+        #e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
+        popt, pcov = curve_fit(P_ret, pp, P_N, p0 = [1]*(dret+1), maxfev = 2*10**4) # fit the Probs data with the exponential defined in P_rec
         
         if plot_fit: plotfit(pp, N, P_N, popt) # show the fit                   
         
         # find the value of p that makes P_rec = 0.5
-        sol = optimize.root_scalar(lambda p: np.exp(popt[0] + popt[1] * p + popt[2] * p**2 + popt[3] * p**3 + 
-                                                    popt[4] * p**4 + popt[5] * p**5 + popt[6] * p**6) - thr,
-        x0 = x_guess, bracket = [xi, xf], method='brentq') # find the value for p that makes the fit be equal to 0.5
+        root = fsolve(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, x_guess)
+        pcN.append(root[0]) # store the result in the array
+        #pcNerr.append(compute_error(popt, np.sqrt(np.diag(pcov)), x_guess, thr, nsamples = 10**4))
+        pcNerr.append(compute_error_new(root[0], popt, np.diag(pcov)))
     
-        pcN.append(sol.root) # store the result in the array
+    ##[::-1] # array of 1/N
+    popt, pcov = curve_fit(reg_func, np.array(NN), np.array(pcN), p0 = [1]*(dfss+1), sigma = pcNerr) # fit the results with reg_func
     
-    pcN = pcN#[::-1] # this line can be deleted
-    N_reciproc = np.array(list(map(lambda n: 1/n, NN)))#[::-1] # array of 1/N
-    popt, pcov = curve_fit(reg_func, NN, pcN) # fit the results with reg_func
+    if plot_reg: plotreg(NN, pcN, pcNerr, popt, α, errorbar) # show the result
     
-    if plot_reg: plotreg(N_reciproc, pcN, popt, α) # show the result
-        
-        
-    return pcN, popt[0]
-
-if __name__ == "__main__":
-    NN = [50, 100, 150, 200, 1000]
-    α = 0.1
-    compute_pc(α, NN, plot_fit= False, plot_reg = False)
-
-
+    return pcN, pcNerr, popt[0], np.sqrt(pcov[0,0])

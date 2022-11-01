@@ -12,7 +12,7 @@ end
 
 
 function overlap(σ1::AbstractVector, σ2::AbstractVector)
-    return σ1 ⋅ σ2
+    return σ1 ⋅ σ2 / length(σ1)
 end
 
 
@@ -77,7 +77,7 @@ function monte_carlo(σ0::AbstractVector, ξ::AbstractMatrix;
                     nsweeps = 100, earlystop = 0, β = 10, λ = 1)
 
     σ = deepcopy(σ0)
-    for sweep in 1:nsweeps
+    for _ in 1:nsweeps
         σ, fliprate = metropolis!(σ, ξ, β, λ)
         fliprate <= earlystop && break
     end

@@ -82,7 +82,7 @@ def compute_pc(α, NN, rootdir = "./", datadir = "julia_data",
     for N in NN:
         P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
         #e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
-        popt, pcov = curve_fit(P_ret, pp, P_N, p0 = [1]*(dret+1)) # fit the Probs data with the exponential defined in P_rec
+        popt, pcov = curve_fit(P_ret, pp, P_N, p0 = [1]*(dret+1), maxfev = 2*10**4) # fit the Probs data with the exponential defined in P_rec
         
         if plot_fit: plotfit(pp, N, P_N, popt) # show the fit                   
         
