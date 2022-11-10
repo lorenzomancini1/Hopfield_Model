@@ -1,6 +1,7 @@
 module CH
 
-using LinearAlgebra, Random, Statistics, Distributions, KahanSummation
+using LinearAlgebra, Random, Statistics, Distributions, KahanSummation, LaTeXStrings, Plots
+using DelimitedFiles
 
 export init_pattern, overlap, generate_patterns, energy
 
@@ -25,10 +26,10 @@ function generate_patterns(M, N)
     return ξ
 end
 
-function perturb(σ::AbstractVector, Δ::Float64)
+function perturb(σ::AbstractVector, δ::Float64)
     N = length(σ)
     σ_new = copy(σ)
-    noise = rand(Normal(0, Δ), N)
+    noise = rand(Normal(0, δ), N)
     return σ_new + noise
 end
 
@@ -61,11 +62,11 @@ function energy(σ::AbstractVector, ξ::AbstractMatrix; β = 10, γ=1)
     end
 end
 
-function energy1(σ, ξ; β = 1)
+function energy1(σ, ξ; λ = 1)
     M = size(ξ, 2)
-    lse = logsumexp(ξ' * σ)/β
+    lse = logsumexp(ξ' * σ)/λ
     max_norm_sq = maximum(vec(sum(ξ.^2, dims = 1) ) )
-    return -lse + 0.5 * max_norm_sq + log(M)/β + 0.5 * (σ' * σ)
+    return -lse + 0.5 * max_norm_sq + log(M)/λ + 0.5 * (σ' * σ)
 end
 
 function softmax(x)
@@ -76,10 +77,48 @@ function softmax(x)
     return ws ./ (1 + s)
 end
 
-function update(σ, ξ; β = 10, nsweeps = 1)
+
+function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)
+    M = round(Int, exp(N*α))
+    ξ = CH.generate_patterns(M, N)
+    k1, k2, k3 = rand(1:M), rand(1:M), rand(1:M)
+    σ1, σ2, σ3 = ξ[:, k1], ξ[:, k2], ξ[:, k3]
+    
+    ϵ1 = range(-1, 2, length = n1)
+    ϵ2 = range(-1, 2, length = n2)
+    Z = zeros( (length(ϵ1), length(ϵ2)) )
+    
+    function savecontour(data; path = "julia_data/contour")
+        if isdir(path)
+            io = open(path*"/contour.txt", "w") do io
+                writedlm(io, data)
+            end
+        else
+            mkpath(path)
+            io = open(path*"/contour.txt", "w") do io
+                writedlm(io, data)
+            end
+        end
+    end
+
+    for i in eachindex(ϵ1)
+        a = ϵ1[i]
+        for j in eachindex(ϵ2)
+            σ_new = σ1 + a*(σ2 - σ1) + ϵ2[j]*(σ3 - σ1)
+            Z[i, j] = CH.energy1(σ_new, ξ)
+        end
+    end
+
+    data = [Z']
+    fig = contour(ϵ1, ϵ2, Z', levels = 90, xlabel = L"\epsilon_1", ylabel = L"\epsilon_2")
+    show && display(fig)
+    save && savecontour(data)
+end
+
+function update(σ, ξ; λ = 1, nsweeps = 1)
     σ_rec = copy(σ)
     for _ in 1:nsweeps
-        σ_rec = ξ * softmax(β .* vec(ξ' * σ_rec))
+        σ_rec = ξ * softmax(λ .* vec(ξ' * σ_rec))
     end
     return σ_rec
 end

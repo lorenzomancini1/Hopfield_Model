@@ -45,7 +45,7 @@ function energy(σ::AbstractVector, ξ::AbstractMatrix, λ = 1)
     qs = λ .* vec(σ' * ξ)
     lse = logsumexp(qs)
     return - lse / λ
-end
+end 
 
 function energy_variation(σ, ξ, i, λ = 1)
     density = exp.(sum(λ .* (ξ .* σ), dims = 1))

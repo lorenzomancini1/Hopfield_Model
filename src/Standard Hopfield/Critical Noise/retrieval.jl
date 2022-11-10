@@ -50,12 +50,15 @@ function savedata(N::Int, α::Float64, data::AbstractMatrix; dir = "julia_data")
 
     if isdir(path)
         io = open(path*"/N"*"$N"*".txt", "w") do io
+            write(io, "ciao, questa è una prova\n")
             writedlm(io, data)
         end
     else
         mkpath(path)
         io = open(path*"/N"*"$N"*".txt", "w") do io
+            write(io, "ciao, questa è una prova\n")
             writedlm(io, data)
+            #write(io, "ciao, questa è una prova")
         end
     end
     nothing

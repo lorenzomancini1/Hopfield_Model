@@ -4,41 +4,61 @@ using DelimitedFiles, Random
 using ProfileView
 using BenchmarkTools
 
-function hist_overlaps(;
-    α = 0.05, N = 1000, nbins = 60, nsweeps = 100,
-     earlystop = 0, β = 10, annealing = false,
-    show = false, save = false)
-
-M = round(Int, N*α)
-ξ = SH.generate_patterns(M, N)
-J = SH.store(ξ)
-    # take a random configuration
-σ = rand([-1,1], N)
-σ_new = SH.monte_carlo(J, σ; nsweeps = nsweeps, earlystop = earlystop, β = β, annealing = annealing)
-
-overlaps = (σ_new' * ξ) ./ N
-
-if show
-    fig = histogram(overlaps', nbins = nbins, label = "N = $N, α = $α", xlabel = "overlap")
+function show_hist(mf, N, α, nbins)
+    fig = histogram(mf, nbins = nbins, label = "N = $N, α = $α", xlabel = "overlap")
     display(fig)
 end
 
-if save
-    path = "overlaps"
+function save_data(mf, N, α, p, dir)
+
+    folder_p = replace(string(p),"." => "" )
+    folder_α = replace(string(α),"." => "" )
+    path = dir*"/p"*folder_p*"/alpha"*folder_α
 
     if isdir(path)
         io = open(path*"/N"*"$N"*".txt", "w") do io
-            writedlm(io, [overlaps])
+            writedlm(io, [mf])
         end
     else
-        mkdir(path)
+        mkpath(path)
         io = open(path*"/N"*"$N"*".txt", "w") do io
-            writedlm(io, [overlaps])
+            writedlm(io, [mf])
         end
     end
 end
 
-return overlaps
+function hist_overlaps(;
+    α = 0.05, N = 1000, nbins = 60, nsweeps = 100,
+     earlystop = 0, p = -1, β = 10, annealing = 0,
+    show = false, save = false, savedir = "julia_data")
+
+M = round(Int, N*α)
+
+    # take a random configuration
+if p < 0
+    ξ = SH.generate_patterns(M, N)
+    J = SH.store(ξ)
+    σ = rand([-1,1], N)
+    σ_new = SH.monte_carlo(σ, J; nsweeps = nsweeps, earlystop = earlystop, β = β, annealing = annealing)
+    mf = ((σ_new' * ξ) ./ N)'
+    show && show_hist(mf, N, α, nbins)
+    save && save_data(mf, N, α, p, savedir)
+else
+    t = 500
+    mf = zeros(t)
+    for i in 1:t
+        ξ = SH.generate_patterns(M, N)
+        J = SH.store(ξ)
+        k = rand(1:M)
+        σ = ξ[:, k]
+        σ_new = SH.perturb(σ, p)
+        σ_rec = SH.monte_carlo(σ_new, J; nsweeps = nsweeps, earlystop = earlystop, β = β, annealing = annealing)
+        mf[i] = SH.overlap(σ_rec, σ)
+    end
+    show && show_hist(mf, N, α, nbins)
+    save && save_data(mf, N, α, p, savedir)
+end
+return mf
 end
 
 function generate_intermediate_patterns(σ1, σ2)#, J)

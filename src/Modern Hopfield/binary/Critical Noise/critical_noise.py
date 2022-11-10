@@ -4,10 +4,10 @@ from scipy import optimize
 from scipy.optimize import curve_fit, fsolve
 from scipy import stats
 
-def reg_func(x, *params): 
-    return sum([p*(x**(-i)) for i, p in enumerate(params)])
+def scaling_func(x, *params): 
+    return sum([p*(x**(i)) for i, p in enumerate(params)])
 
-def P_ret(x, *params): 
+def prob_func(x, *params): 
     return np.exp(sum([p*(x**i) for i, p in enumerate(params)]))
 
 def plotfit(pp, N, P_N, popt):
@@ -71,29 +71,36 @@ def compute_error_new(p, params, vars):
 def compute_pc(α, NN, rootdir = "./", datadir = "julia_data",
                plot_fit = False, plot_reg = False,
                thr = 0.5,
-               x_guess = 0.3, dret = 6, dfss = 2,
+               x_guess = 0.3, d0 = 6, d1 = 2,
                errorbar = False):
     
     pcN = []
     pcNerr = []
     folder = str(α).replace(".", "")
-    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
-        
+    pp = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t", skiprows=1)[:, 0]
+  
     for N in NN:
-        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
+        P_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t", skiprows=1)[:, 1] # get Probs data
+
         #e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
-        popt, pcov = curve_fit(P_ret, pp, P_N, p0 = [1]*(dret+1), maxfev = 2*10**4) # fit the Probs data with the exponential defined in P_rec
+        popt, pcov = curve_fit(prob_func, pp, P_N, p0 = [1]*(d0+1), maxfev = 2*10**4) # fit the Probs data with the exponential defined in P_rec
         
         if plot_fit: plotfit(pp, N, P_N, popt) # show the fit                   
         
+        xi = x_guess * (0.7) #
+        xf = x_guess * (1.3)
+        sol = optimize.root_scalar(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, bracket=[xi, xf], method='brentq', x0 = x_guess)
         # find the value of p that makes P_rec = 0.5
-        root = fsolve(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, x_guess)
-        pcN.append(root[0]) # store the result in the array
+        #root = fsolve(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, x_guess)
+        #pcN.append(root[0]) # store the result in the array
+        pcN.append(sol.root)
         #pcNerr.append(compute_error(popt, np.sqrt(np.diag(pcov)), x_guess, thr, nsamples = 10**4))
-        pcNerr.append(compute_error_new(root[0], popt, np.diag(pcov)))
+        pcNerr.append(compute_error_new(sol.root, popt, np.diag(pcov)))
     
+    x = list(map(lambda x: 1/x, NN))[::-1]
+    y = pcN[::-1]
     ##[::-1] # array of 1/N
-    popt, pcov = curve_fit(reg_func, np.array(NN), np.array(pcN), p0 = [1]*(dfss+1), sigma = pcNerr) # fit the results with reg_func
+    popt, pcov = curve_fit(scaling_func, x, y, p0 = [1]*(d1+1), sigma = pcNerr) # fit the results with reg_func
     
     if plot_reg: plotreg(NN, pcN, pcNerr, popt, α, errorbar) # show the result
     
