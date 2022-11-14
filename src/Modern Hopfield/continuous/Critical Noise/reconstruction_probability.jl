@@ -2,9 +2,7 @@ include("../continuous_hopfield.jl")
 using Statistics, LinearAlgebra, Plots, DelimitedFiles
 
 function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples;
-    nsweeps = 100,
-    β = 10,
-    thr = 0.1,
+    d0 = 0.05,
     λ = 1)
 
     M = round(Int, exp(N * α)) #compute M
@@ -29,7 +27,7 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
             
             d = CH.distance(σ_rec, σ)
             #print(m)
-            if d <= thr
+            if d <= d0
                 success[sample] = 1
                 #count += 1
             end
@@ -42,41 +40,58 @@ function one_reconstruction_probability(N::Int, pp::AbstractVector, α, nsamples
     return probs, error_bars
 end
 
-function reconstruction_probability(NN::AbstractVector,
-    α;
-    pp::AbstractVector = range( 0.1, 0.9, length = 22 ),
-    β = 10^3,
-    nsamples = 5*10^2,
-    thr = 0.1,
-    λ=1,
-    show = false,
-    save = true)
+function savedata(N::Int, λ::Float64, α::Float64, data::AbstractMatrix,
+    nsamples::Int64, d0::Float64; dir = "julia_data")
 
-    for N in NN 
-        prob, error = one_reconstruction_probability(N, pp, α, nsamples;  λ = λ, thr = thr) 
+    #folder = replace(string(λ),"." => "" )
+    #subfolder = replace(string(α),"." => "" )
+    #path = dir*"/lambda_"*folder*"/alpha_"*subfolder
 
-        if show
-            fig = plot(pp, prob, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
-            xlabel = "p", ylabel = "P_reconst") 
-            display(fig)        
+    folder_lambda = replace(string(λ),"." => "" )
+    folder_d0 = replace(string(d0),"." => "" )
+    folder_alpha = replace(string(α),"." => "" )
+    path = dir*"/q_"*folder_d0*"/lambda_"*folder_lambda*"/alpha_"*folder_alpha
+
+    if isdir(path)
+        io = open(path*"/N"*"$N"*".txt", "w") do io
+            write(io, "nsamples = "*"$nsamples"*"d0 = "*"$d0"*"\n")
+            writedlm(io, data)
         end
-
-        if save
-            folder = replace(string(α),"." => "" )
-            path = "julia_data/alpha_"*folder
-
-            if isdir(path)
-                io = open(path*"/probsN"*"$N"*".txt", "w") do io
-                    writedlm(io, [pp prob error mag])
-                end
-            else
-                mkdir(path)
-                io = open(path*"/probsN"*"$N"*".txt", "w") do io
-                    writedlm(io, [pp prob error mag])
-                end
-            end
+    else
+        mkpath(path)
+        io = open(path*"/N"*"$N"*".txt", "w") do io
+            write(io, "nsamples = "*"$nsamples"*"d0 = "*"$d0"*"\n")
+            writedlm(io, data)
         end
     end
-    return       
+    nothing
 end
 
+function plotf(N::Int, α::Float64, pp::AbstractVector, f::AbstractVector)
+    fig = plot(pp, f, size = (500,300), markershape =:circle, label = "N = $N, α = $α",
+                    xlabel = "p", ylabel = "probs") 
+    display(fig)
+    nothing
+end
+
+function simulate_retrieval(NN::AbstractVector, dd::AbstractVector;
+    d0 = 0.05, # one_rec_freq params
+    λ = 1.,# monte carlo params
+    save = true, show = false, savedir = "julia_data",
+    verbose = true)
+
+    for d in dd
+        α, pp = d[1], d[2]
+        verbose && println("------------------α = $α------------------")
+        for n in NN
+            N, nsamples = n[1], n[2]
+            f, ferr  = one_reconstruction_probability(N, pp, α, nsamples;  λ = λ, d0 = d0)
+            verbose && println("N = $N ---> Done!")
+            data = [pp f ferr]
+            show == true && plotf(N, α, pp, f)
+            save == true && savedata(N, λ, α, data, nsamples, d0; dir = savedir)
+            
+        end    
+    end
+    nothing
+end

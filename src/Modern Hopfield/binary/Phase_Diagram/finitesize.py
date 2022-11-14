@@ -71,10 +71,10 @@ def compute_αc(λ, NN, rootdir = "./", datadir = "julia_data",
     αcN = [] # list to contain
     αcNerr = []
     folder = str(λ).replace(".", "")
-    αα = np.loadtxt(rootdir+datadir+"/lambda_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t")[:, 0]
+    αα = np.loadtxt(rootdir+datadir+"/lambda_"+folder+"/N{}.txt".format(NN[0]), delimiter = "\t", skiprows=1)[:, 0]
         
     for N in NN:
-        P_N = np.loadtxt(rootdir+datadir+"/lambda_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 1] # get Probs data
+        P_N = np.loadtxt(rootdir+datadir+"/lambda_"+folder+"/N{}.txt".format(N), delimiter = "\t", skiprows=1)[:, 1] # get Probs data
         #e_N = np.loadtxt(rootdir+datadir+"/alpha_"+folder+"/N{}.txt".format(N), delimiter = "\t")[:, 2] # get Probs errors
         popt, pcov = curve_fit(prob_func, αα, P_N, p0 = [1]*(d0+1), maxfev = 2*10**5) # fit the Probs data with the exponential defined in P_rec
         

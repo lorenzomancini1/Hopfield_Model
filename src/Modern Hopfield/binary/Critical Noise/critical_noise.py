@@ -71,7 +71,7 @@ def compute_error_new(p, params, vars):
 def compute_pc(α, NN, rootdir = "./", datadir = "julia_data",
                plot_fit = False, plot_reg = False,
                thr = 0.5,
-               x_guess = 0.3, d0 = 6, d1 = 2,
+               x_guess = 0.3, xi = 0.05, xf = 0.5, d0 = 6, d1 = 2,
                errorbar = False):
     
     pcN = []
@@ -87,8 +87,8 @@ def compute_pc(α, NN, rootdir = "./", datadir = "julia_data",
         
         if plot_fit: plotfit(pp, N, P_N, popt) # show the fit                   
         
-        xi = x_guess * (0.7) #
-        xf = x_guess * (1.3)
+        #xi = x_guess * (0.7) #
+        #xf = x_guess * (1.3)
         sol = optimize.root_scalar(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, bracket=[xi, xf], method='brentq', x0 = x_guess)
         # find the value of p that makes P_rec = 0.5
         #root = fsolve(lambda x: np.exp(sum([p*(x**i) for i, p in enumerate(popt)])) - thr, x_guess)
