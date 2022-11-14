@@ -28,8 +28,8 @@ def plotsigmoid(x, y, N, popt):
     plt.plot(x, y, label = "simulation", marker = "o", color = "black", linestyle = "None", markerfacecolor = "None")
     plt.plot(xx, sigmoid(xx, *popt),
              label = "fit", color = "red", linewidth = 1.)
-    plt.ylabel("Reconstruction prob.", size = 12)
-    plt.xlabel("p", size = 12)
+    plt.ylabel(r"$ \mathrm{P}( escape | \alpha )$", size = 12)
+    plt.xlabel(r"$\alpha$", size = 12)
     plt.title("N = {}".format(N), size = 12)
     plt.legend()
     plt.grid(axis = "both", linestyle = "--", alpha = 0.5)
@@ -50,11 +50,11 @@ def plotscaling(x, y, yerr, popt, errorbar, λ = -1):
     # here y is the list of pcN reversed
     if errorbar:
         plt.errorbar(x, y, yerr = yerr, c = "black", marker = "o", markerfacecolor = "None", capsize = 3,
-                linewidth = 1., linestyle = "None", label = r"experimental $\alpha_c(N)$")
+                linewidth = 1., linestyle = "None", label = r"experimental data")
     
     else:
         plt.plot(x, y, c = "black", marker = "o", markerfacecolor = "None",
-                linewidth = 1., linestyle = "None", label = r"experimental $\alpha_c(N)$")
+                linewidth = 1., linestyle = "None", label = r"experimental data$")
     
     plt.plot(xx, scaling(xx, *popt), c = "blue",
              linewidth = 1., label = r"intercept $\alpha_c \sim$ {}".format(round(popt[0], 3)))
