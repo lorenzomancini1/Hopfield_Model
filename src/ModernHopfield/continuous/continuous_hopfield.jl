@@ -1,4 +1,4 @@
-module CH
+module MHC
 
 using LinearAlgebra, Random, Statistics, Distributions, KahanSummation, LaTeXStrings, Plots
 using DelimitedFiles
@@ -20,8 +20,7 @@ function distance(σ1::AbstractVector, σ2::AbstractVector)
     return norm(σ1 - σ2)
 end
 
-function generate_patterns(M, N)
-    #ξ = 1. + 4 * rand(N, M)
+function generate_patterns(N, M)
     ξ = randn(N, M)
     return ξ
 end
@@ -37,45 +36,40 @@ function logsumexp(x::AbstractVector)
     imax = argmax(x)
     xmax = x[imax]
     ws = exp.(x .- xmax)
-    ws[imax] = 0 # in order to se log1p later
+    ws[imax] = 0 # in order to use log1p later
     return xmax + log1p(sum_kbn(ws))
 end
 
-function energy(σ::AbstractVector, ξ::AbstractMatrix; β = 10, γ=1)
-    M = size(ξ, 2)
-    #N = length(σ)
-    
-    max_norm_sq = argmax(vec(sum(ξ.^2, dims = 1) ) )
-    #print(max_norm_sq)
-    se = 0
-    
-    for μ in 1:M
-        se += exp(β * overlap(σ, ξ[:, μ]))
-    end
-    lse = log(se)/β
-    energy = -lse + 0.5*γ*sum(σ.^2) + log(M)/β + 0.5*max_norm_sq
-    
-    if energy >= 10^4
-        return 10^4
-    else
-        return energy
-    end
+function energy(σ::AbstractVector, ξ::AbstractMatrix, λ)
+    N, M = size(ξ)
+    x = (λ .* (σ' * ξ)) |> vec 
+    lse = -logsumexp(x) / λ
+    return lse + dot(σ,σ) / 2
 end
 
-function energy1(σ, ξ; λ = 1)
-    M = size(ξ, 2)
-    lse = logsumexp(ξ' * σ)/λ
-    max_norm_sq = maximum(vec(sum(ξ.^2, dims = 1) ) )
-    return -lse + 0.5 * max_norm_sq + log(M)/λ + 0.5 * (σ' * σ)
+function grad_energy(σ::AbstractVector, ξ::AbstractMatrix, λ)
+    N, M = size(ξ)
+    x = (λ .* (σ' * ξ)) |> vec
+    return σ  - softmax_expect(x, ξ)
 end
 
-function softmax(x)
-    imax = argmax(x)
-    xmax = x[imax]
+function softmax(x::AbstractVector)
+    xmax = maximum(x)
     ws = exp.(x .- xmax)
-    s = sum_kbn(ws) - ws[imax]
-    return ws ./ (1 + s)
+    s = sum_kbn(ws)
+    return ws ./ s
 end
+
+function softmax_expect(x::AbstractVector, o::AbstractVector)
+   return sum_kbn(softmax(x) .* o)
+end
+
+function softmax_expect(x::AbstractVector, o::AbstractArray{T,Nd}) where {T,Nd}
+    @assert size(o, Nd) == length(x)
+    ws = softmax(x)
+    return mapslices(y -> sum_kbn(ws .* y), o, dims=Nd)
+end
+
 
 
 function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)
@@ -115,12 +109,12 @@ function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 
     save && savecontour(data)
 end
 
-function update(σ, ξ; λ = 1, nsweeps = 1)
-    σ_rec = copy(σ)
-    for _ in 1:nsweeps
-        σ_rec = ξ * softmax(λ .* vec(ξ' * σ_rec))
+function gradient_descent(σ0, ξ; λ = 1, η=0.01, nsteps=100)
+    σ = deepcopy(σ0)
+    for t in 1:nsteps
+        σ .+= -η .* grad_energy(σ, ξ, λ)  
     end
-    return σ_rec
+    return σ
 end
 
-end
+end #module
