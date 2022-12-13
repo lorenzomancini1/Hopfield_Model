@@ -5,25 +5,11 @@ using DelimitedFiles
 
 export init_pattern, overlap, generate_patterns, energy
 
-function init_pattern(N)
-    #σ = rand(1:5, N) #cambiare
-    σ = randn(N)
-    return σ
-end
+init_pattern(N) = randn(N)
 
-function overlap(σ1::AbstractVector, σ2::AbstractVector)
-    return σ1 ⋅ σ2
+overlap(σ1::AbstractVector, σ2::AbstractVector) = σ1 ⋅ σ2 / length(σ1)
 
-end
-
-function distance(σ1::AbstractVector, σ2::AbstractVector)
-    return norm(σ1 - σ2)
-end
-
-function generate_patterns(N, M)
-    ξ = randn(N, M)
-    return ξ
-end
+generate_patterns(N, M) = randn(N, M)
 
 function perturb(σ::AbstractVector, δ::Float64)
     N = length(σ)
@@ -70,8 +56,6 @@ function softmax_expect(x::AbstractVector, o::AbstractArray{T,Nd}) where {T,Nd}
     return mapslices(y -> sum_kbn(ws .* y), o, dims=Nd)
 end
 
-
-
 function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)
     M = round(Int, exp(N*α))
     ξ = CH.generate_patterns(M, N)
@@ -109,12 +93,21 @@ function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 
     save && savecontour(data)
 end
 
-function gradient_descent(σ0, ξ; λ = 1, η=0.01, nsteps=100)
+function gradient_descent(σ0::AbstractVector, ξ::AbstractArray; λ = 1, η=0.01, nsteps=100)
     σ = deepcopy(σ0)
+    N = length(σ)
+
+    res = []
+    function saveres!(t)
+        push!(res, (; t, E = energy(σ, ξ, λ) / N, Δ0 = norm(σ .- σ0)^2 / N))
+    end
+
+    saveres!(0)
     for t in 1:nsteps
         σ .+= -η .* grad_energy(σ, ξ, λ)  
+        saveres!(t)
     end
-    return σ
+    return σ, res
 end
 
 end #module
