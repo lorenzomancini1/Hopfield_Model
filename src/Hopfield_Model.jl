@@ -1,5 +1,10 @@
 module Hopfield_Model
 
+using OnlineStats
+using OrderedCollections: OrderedDict
+using LinearAlgebra, Random, Statistics
+include("mystats.jl")
+
 include("StandardHopfield/standard_hopfield.jl")
 export  SH
 

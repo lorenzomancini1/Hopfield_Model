@@ -3,68 +3,83 @@ using LinearAlgebra, Random, Statistics
 using DataFrames, CSV
 using Plots, StatsPlots
 using BenchmarkTools
-using DataStructures
+using OrderedCollections: OrderedDict
 using DrWatson
+using OnlineStats
+using Hopfield_Model: MyStats, mean_with_err
+
 # using ProfileView: @profview
 
 
 
-function single_run(
+function gradient_descent(;
         N = 10,
         α = 0.2,
         η = 0.5,
         maxsteps = 1000,
         nsamples = 10, 
-        resfile = datadir("gradient_descent", "res_gaussian.csv")
+        resfile = "res_gaussian.csv",
         )
     
     M = round(Int, exp(α * N))
     allres = DataFrame()
     for λ in 0.1:0.1:1.0
-        avg = OrderedDict{Symbol,Any}(:λ => λ, :nsamples => nsamples)
+        stats = MyStats()
         for _ in 1:nsamples
             ξ = MHC.generate_patterns(N, M)
             σ0 = ξ[:,1]
             σ, res = MHC.gradient_descent(σ0, ξ; λ, η, maxsteps);
-            update_average!(avg, last(res))
+            OnlineStats.fit!(stats, last(res))
         end
-        avg = finalize_average(avg)
-        push!(allres, avg)
+        stats = mean_with_err(stats)
+        push!(allres, NamedTuple(stats))
     end
 
     if resfile != ""
-        mkpath(dirname(resfile))
-        if isfile(resfile)
-            df = CSV.read(resfile)
-            append!(df, DataFrame(allres))
-        else
-            df = DataFrame(allres)
-        end
-        CSV.write(resfile, df)
+        respath = datadir("gradient_descent", resfile)
+        mkpath(dirname(respath))
+        respath = check_filename(respath)
+        CSV.write(respath, allres)
     end
     return allres
 end
 
-function update_average!(avg::AbstractDict, nt)
-    for (k, v) in pairs(nt)
-        if !haskey(avg, k)
-            avg[k] = Series(Mean(), Variance())
-        end
-        fit!(avg[k], v)
+"""
+Check if a file with the name exists, if so, append a number to the name.
+"""
+function check_filename(filename)
+    i = 0
+    _filename = filename
+    while isfile(_filename)
+        i += 1
+        _filename = filename * "." * string(i)
     end
+    filename = _filename
+    return filename
 end
 
-function finalize_average(avg)
-    d = OrderedDict{Symbol,Any}()
-    for (k, v) in avg
-        if v isa OnlineStat
-            d[k] = value(v.stats[1])
-            d[Symbol(k, "_err")] = sqrt(value(v.stats[2]) / v.stats[2].n)
-        else
-            d[k] = v
-        end
-    end
-    return d
-end
+# function update_average!(avg::AbstractDict, nt)
+#     for (k, v) in pairs(nt)
+#         if !haskey(avg, k)
+#             avg[k] = Series(Mean(), Variance())
+#         end
+#         OnlineStats.fit!(avg[k], v)
+#     end
+# end
 
-    single_run()
+# function finalize_average(avg)
+#     d = OrderedDict{Symbol,Any}()
+#     for (k, v) in avg
+#         if v isa OnlineStat
+#             d[k] = value(v.stats[1])
+#             d[Symbol(k, "_err")] = sqrt(value(v.stats[2]) / v.stats[2].n)
+#         else
+#             d[k] = v
+#         end
+#     end
+#     return d
+# end
+
+gradient_descent(resfile="test.csv")
+
+params_list = dict_list(Dict(:λ => [0.1:0.1:1.0;], :nsamples => 10))

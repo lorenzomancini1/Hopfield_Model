@@ -2,12 +2,12 @@ module MHC
 
 using LinearAlgebra, Random, Statistics, Distributions, KahanSummation, LaTeXStrings, Plots
 using DelimitedFiles
-
 export init_pattern, overlap, generate_patterns, energy
 
 init_pattern(N) = randn(N)
 
 overlap(σ1::AbstractVector, σ2::AbstractVector) = σ1 ⋅ σ2 / length(σ1)
+sqdistance(σ1::AbstractVector, σ2::AbstractVector) = norm(σ1 .- σ2)^2 / length(σ1)
 
 generate_patterns(N, M) = randn(N, M)
 
@@ -114,16 +114,16 @@ function gradient_descent(σ0::AbstractVector, ξ::AbstractArray;
 
     res = []
     function saveres!(t)
-        push!(res, (; t, E = energy(σ, ξ, λ) / N, Δ0 = norm(σ .- σ0)^2 / N))
+        push!(res, (; t, E = energy(σ, ξ, λ) / N, Δ0 = sqdistance(σ, σ0)))
     end
 
     saveres!(0)
     for t in 1:maxsteps
         σ_new = σ .- η .* grad_energy(σ, ξ, λ)
-        Δ = norm(σ_new .- σ)^2 / √N
+        Δ = sqdistance(σ_new, σ)
         σ .= σ_new
         saveres!(t)
-        Δ < xtol && break
+        √Δ < xtol && break
     end
     return σ, res
 end
