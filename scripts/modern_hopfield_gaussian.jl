@@ -19,7 +19,7 @@ function single_run(
         )
     
     M = round(Int, exp(α * N))
-    allres = []
+    allres = DataFrame()
     for λ in 0.1:0.1:1.0
         avg = OrderedDict{Symbol,Any}(:λ => λ, :nsamples => nsamples)
         for _ in 1:nsamples
@@ -34,7 +34,12 @@ function single_run(
 
     if resfile != ""
         mkpath(dirname(resfile))
-        df = DataFrame(allres)
+        if isfile(resfile)
+            df = CSV.read(resfile)
+            append!(df, DataFrame(allres))
+        else
+            df = DataFrame(allres)
+        end
         CSV.write(resfile, df)
     end
     return allres
@@ -62,4 +67,4 @@ function finalize_average(avg)
     return d
 end
 
-single_run()
+    single_run()
