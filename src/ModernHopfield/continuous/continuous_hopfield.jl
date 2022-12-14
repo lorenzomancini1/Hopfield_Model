@@ -50,10 +50,21 @@ function softmax_expect(x::AbstractVector, o::AbstractVector)
    return sum_kbn(softmax(x) .* o)
 end
 
-function softmax_expect(x::AbstractVector, o::AbstractArray{T,Nd}) where {T,Nd}
-    @assert size(o, Nd) == length(x)
-    ws = softmax(x)
-    return mapslices(y -> sum_kbn(ws .* y), o, dims=Nd)
+function softmax_expect(logits::AbstractVector, o::AbstractMatrix)
+    N, M = size(o)
+    @assert M == length(logits)
+    ws = softmax(logits)
+    return mapslices(sum_kbn, ws .* o', dims = 1) |> vec
+    
+    # y = zeros(N)
+    # wso = ws .* o'
+    # @assert size(wso) == (M, N)
+    # # wso = zeros(M)
+    # for i=1:N
+    #     # wso .= ws .* vec(view(o, i, :))
+    #     y[i] = sum_kbn(wso[:,i])
+    # end
+    # return y
 end
 
 function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)
@@ -93,7 +104,11 @@ function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 
     save && savecontour(data)
 end
 
-function gradient_descent(σ0::AbstractVector, ξ::AbstractArray; λ = 1, η=0.01, nsteps=100)
+function gradient_descent(σ0::AbstractVector, ξ::AbstractArray;
+        λ = 1, 
+        η=0.01, 
+        xtol = 1e-6, 
+        maxsteps=1000)
     σ = deepcopy(σ0)
     N = length(σ)
 
@@ -103,9 +118,12 @@ function gradient_descent(σ0::AbstractVector, ξ::AbstractArray; λ = 1, η=0.0
     end
 
     saveres!(0)
-    for t in 1:nsteps
-        σ .+= -η .* grad_energy(σ, ξ, λ)  
+    for t in 1:maxsteps
+        σ_new = σ .- η .* grad_energy(σ, ξ, λ)
+        Δ = norm(σ_new .- σ)^2 / √N
+        σ .= σ_new
         saveres!(t)
+        Δ < xtol && break
     end
     return σ, res
 end
