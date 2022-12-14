@@ -13,6 +13,9 @@ Base.keys(s::MyStats) = keys(s._stats)
 Base.pairs(s::MyStats) = pairs(s._stats)
 Base.setindex!(s::MyStats, v, k::Symbol) = setindex!(s._stats, v, k)
 Base.haskey(s::MyStats, k::Symbol) = haskey(s._stats, k)
+Base.length(s::MyStats) = length(s._stats)
+Base.values(s::MyStats) = values(s._stats)
+
 
 function Base.getproperty(s::MyStats, k::Symbol)
     if hasfield(MyStats, k)
@@ -43,6 +46,8 @@ function OnlineStats._merge!(s1::MyStats, s2::MyStats)
         OnlineStats.merge!(s1[k], v)
     end
 end
+
+OnlineStats.nobs(s::MyStats) = length(s._stats) > 0 ? OnlineStats.nobs(first(value(s))) : 0
 
 OnlineStats.value(s::MyStats) = Statistics.mean(s)
 
