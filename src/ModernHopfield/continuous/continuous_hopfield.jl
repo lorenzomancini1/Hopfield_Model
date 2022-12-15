@@ -54,17 +54,10 @@ function softmax_expect(logits::AbstractVector, o::AbstractMatrix)
     N, M = size(o)
     @assert M == length(logits)
     ws = softmax(logits)
-    return mapslices(sum_kbn, ws .* o', dims = 1) |> vec
+    # return mapslices(sum_kbn, ws .* o', dims = 1) |> vec # type unstable
     
-    # y = zeros(N)
-    # wso = ws .* o'
-    # @assert size(wso) == (M, N)
-    # # wso = zeros(M)
-    # for i=1:N
-    #     # wso .= ws .* vec(view(o, i, :))
-    #     y[i] = sum_kbn(wso[:,i])
-    # end
-    # return y
+    wso = ws .* o'
+    return [sum_kbn(wso[:,i]) for i=1:N]
 end
 
 function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)

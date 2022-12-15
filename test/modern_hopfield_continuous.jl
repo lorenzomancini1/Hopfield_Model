@@ -1,17 +1,18 @@
 @testset "logsumexp" begin
     x = randn(100)
-    @test MHC.logsumexp(x) ≈ log(sum(exp.(x)))
+    y = @inferred MHC.logsumexp(x)
+    @test y ≈ log(sum(exp.(x)))
 end
 
 @testset "softmax_expect" begin
     N, M = 100, 1000
     logits = randn(M)
     ξ = randn(N, M)
-    ws = MHC.softmax(logits)
+    ws = @inferred MHC.softmax(logits)
     @test all(1 .≥ ws .≥ 0)
     @test sum(ws) ≈ 1
     ys = ws .* ξ'
-    a = MHC.softmax_expect(logits, ξ)
+    a = @inferred MHC.softmax_expect(logits, ξ)
     @test size(a) == (N,)
     @test a ≈ mapslices(sum, ys, dims=1) |> vec
 end
