@@ -3,6 +3,7 @@ module Hopfield_Model
 using OnlineStats
 using OrderedCollections: OrderedDict
 using LinearAlgebra, Random, Statistics
+using DrWatson
 include("mystats.jl")
 
 include("StandardHopfield/standard_hopfield.jl")

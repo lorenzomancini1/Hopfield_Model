@@ -47,7 +47,7 @@ function OnlineStats._merge!(s1::MyStats, s2::MyStats)
     end
 end
 
-OnlineStats.nobs(s::MyStats) = length(s._stats) > 0 ? OnlineStats.nobs(first(value(s))) : 0
+OnlineStats.nobs(s::MyStats) = length(s._stats) > 0 ? OnlineStats.nobs(first(values(s))) : 0
 
 OnlineStats.value(s::MyStats) = Statistics.mean(s)
 
@@ -64,3 +64,43 @@ function mean_with_err(s::MyStats)
 end
 
 Base.show(io::IO, s::MyStats) = show(io, s._stats)
+
+# Binary op interface for reduce/mapreduce
+function (s::MyStats)(x, y)
+    OnlineStats.fit!(s, x)
+    OnlineStats.fit!(s, y)
+    return s
+end
+
+# Binary op interface for reduce/mapreduce
+function (s::MyStats)(x::MyStats, y)
+    @assert s === x
+    OnlineStats.fit!(s, y)
+    return s
+end
+
+
+## UTiLS #######
+
+function DrWatson.dict_list(od::OrderedDict)
+    d = Dict(od)
+    dlist = dict_list(d)
+    return [OrderedDict((k => d[k] for k in keys(od))...) for d in dlist]
+end
+
+
+"""
+Check if a file with the name exists, if so, append a number to the name.
+"""
+function check_filename(filename)
+    mkpath(dirname(filename))
+    i = 0
+    _filename = filename
+    while isfile(_filename)
+        i += 1
+        _filename = filename * "." * string(i)
+    end
+    filename = _filename
+    return filename
+end
+
