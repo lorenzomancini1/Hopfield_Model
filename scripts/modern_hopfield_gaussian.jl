@@ -41,19 +41,18 @@ function span_gd(;
     params_list = dict_list(OrderedDict(:N => N, :α=> α, :λ => λ, :nsamples => nsamples))
     allres = Vector{Any}(undef, length(params_list))
     
-    foreach(enumerate(params_list)) do (i, p)
+    ThreadsX.foreach(enumerate(params_list)) do (i, p)
         stats = single_run_gd(; p..., η, maxsteps)
         allres[i] = NamedTuple(merge(p, stats))
     end
 
     allres = DataFrame(allres)
     if resfile != ""
-        respath = datadir("gradient_descent", resfile)
+        respath = datadir("exp_gradient_descent_gaussian", resfile)
         respath = check_filename(respath)
         CSV.write(respath, allres)
     end
     return allres
 end
 
-# @btime gradient_descent(resfile="", N=10, nsamples=100)
-
+@time span_gd(resfile="run.csv", N=40, nsamples=100, α=0.2)

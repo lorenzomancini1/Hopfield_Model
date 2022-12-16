@@ -94,7 +94,7 @@ Check if a file with the name exists, if so, append a number to the name.
 """
 function check_filename(filename)
     mkpath(dirname(filename))
-    i = 0
+    i = 1
     _filename = filename
     while isfile(_filename)
         i += 1
