@@ -29,7 +29,7 @@ function make_plot(df; α=0.2, Ns = [50, 60, 70])
     
     # @df df_N40 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 40", msc=:auto)
     for N in Ns
-        @df dfs[N] plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 50", msc=:auto)
+        @df dfs[N] plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = $N", msc=:auto)
     end
     vline!([MHG.λcrit(α)], label = "λcrit", ls=:dash, lw=1, color=:black)
     savefig(joinpath(@__DIR__, "fig_gd_α=$α.pdf"))
