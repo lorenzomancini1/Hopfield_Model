@@ -43,7 +43,7 @@ function span_gd(;
     allres = Vector{Any}(undef, length(params_list))
     
     ThreadsX.foreach(enumerate(params_list)) do (i, p)
-        stats = single_run_gd(; p..., η, maxsteps)
+        stats = singlerun_gd(; p..., η, maxsteps)
         allres[i] = merge(p, stats)
     end
 
