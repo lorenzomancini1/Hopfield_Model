@@ -9,7 +9,7 @@ function read_data()
     # function data_analysis()
     respath = datadir("raw", "modern_hopfield_gaussian", "gradient_descent")
     files = [joinpath(respath, file) for file in readdir(respath)]
-    dfs = [CSV.read(file, DataFrame) for file in files]
+    dfs = [CSV.read(file, DataFrame) for file in files if endswith(file, ".csv")]
     df = vcat(dfs...)
     df = combine_results(df, by=1:3, cols=5:2:ncol(df), errs=6:2:ncol(df), col_n=:nsamples)
     return sort!(df, [:N, :α, :λ])
