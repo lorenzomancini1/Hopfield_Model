@@ -4,6 +4,6 @@
 **/__pycache__
 **/julia_data
 **/figures
-Manifest.toml
+#Manifest.toml
 *.bak
 **/generate*
