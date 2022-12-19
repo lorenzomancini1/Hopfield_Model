@@ -1,18 +1,14 @@
 module Hopfield_Model
 
-using OnlineStats
-using OrderedCollections: OrderedDict
 using LinearAlgebra, Random, Statistics
-using DrWatson
-include("mystats.jl")
 
 include("StandardHopfield/standard_hopfield.jl")
 export  SH
 
-include("ModernHopfield/binary/modern_hopfield_binary.jl")
+include("ModernHopfieldBinary/modern_hopfield_binary.jl")
 export MHB
 
-include("ModernHopfield/continuous/continuous_hopfield.jl")
-export MHC
+include("ModernHopfieldGaussian/modern_hopfield_gaussian.jl")
+export MHG
 
 end
