@@ -1,37 +1,3 @@
-using Hopfield_Model: MHG
-using DrWatson
-using DataFrames, CSV
-using Plots, StatsPlots
-using ScienceProjectTemplate: combine_results, subseteq
-
-# function data_analysis()
-respath = datadir("raw", "modern_hopfield_gaussian", "gradient_descent")
-files = [joinpath(respath, file) for file in readdir(respath)]
-dfs = [CSV.read(file, DataFrame) for file in files]
-df = vcat(dfs...)
-
-α = 0.2
-
-df_N40 = subseteq(df; α, N = 40)
-df_N50 = subseteq(df; α, N = 50)
-df_N60 = subseteq(df; α, N = 60)
-df_N70 = subseteq(df; α, N = 70)
-
-
-plot(title = "Final dist. from init. cond. of GD. α=$α",
-    xlabel = "λ", 
-    ylabel = "Δ", 
-    legend = :topright,
-    xlims = (0.15, 0.4))
- 
-# @df df_N40 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 40", msc=:auto)
-@df df_N50 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 50", msc=:auto)
-@df df_N60 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 60", msc=:auto)
-@df df_N70 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 70", msc=:auto)
-
- 
-# @df dfN70 plot(:λ, :E, yerr = :E_err, label = "N = 70")
-
 
 
 function contourplot(; N = 40, α = 0.1, show = true, save = true, n1 = 150, n2 = 150)

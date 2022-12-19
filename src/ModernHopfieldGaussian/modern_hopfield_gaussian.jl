@@ -3,6 +3,10 @@ module MHG
 using LinearAlgebra, Random, Statistics, Distributions, KahanSummation, LaTeXStrings, Plots
 using DelimitedFiles
 export init_pattern, overlap, generate_patterns, energy
+using Roots
+
+αcrit(λ) = λ + 0.5 * log(1 - λ^2)
+λcrit(α) = find_zero(λ -> α - αcrit(λ), α)
 
 init_pattern(N) = randn(N)
 
