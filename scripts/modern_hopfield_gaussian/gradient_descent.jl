@@ -1,9 +1,7 @@
 using LinearAlgebra, Random, Statistics
 using DataFrames, CSV
 using BenchmarkTools
-using OrderedCollections: OrderedDict
 using DrWatson
-using OnlineStats
 using ThreadsX
 using Hopfield_Model: MHG
 using ScienceProjectTemplate: Stats, mean_with_err, check_filename, cartesian_list

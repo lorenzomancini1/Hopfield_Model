@@ -15,27 +15,36 @@ function read_data()
     return sort!(df, [:N, :α, :λ])
 end
 
-function make_plot(df; α=0.2, Ns = [50, 60, 70])
+function make_plot(df; 
+            α=0.2, 
+            Ns = [50, 60, 70], 
+            xlims=(0.15, 4))
+
     dfs = Dict()
     for N in Ns
         dfs[N] = subseteq(df; α, N)
     end
 
-    p = plot(title = "Final dist. from init. cond. of GD. α=$α",
+    p = plot(; title = "Final dist. from init. cond. of GD. α=$α",
             xlabel = "λ", 
             ylabel = "Δ", 
             legend = :topright,
-            xlims = (0.15, 0.4))
+            xlims)
     
     # @df df_N40 plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = 40", msc=:auto)
     for N in Ns
         @df dfs[N] plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = $N", msc=:auto)
     end
     vline!([MHG.λcrit(α)], label = "λcrit", ls=:dash, lw=1, color=:black)
-    savefig(joinpath(@__DIR__, "fig_gd_α=$α.pdf"))
     return p
 end
 
 
 df = read_data()
-make_plot(df, α=0.2)
+
+# make_plot(df, α=0.2, Ns=[50,60,70], xlims=(0.15,0.4))\savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
+# savefig(joinpath(@__DIR__, "fig_gd_α=0.2.pdf"))
+
+
+# make_plot(df, α=0.1, Ns=[50,70,100], xlims=(0.05,0.3))
+# savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
