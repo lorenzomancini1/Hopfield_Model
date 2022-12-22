@@ -18,7 +18,8 @@ end
 function make_plot(df; 
             α=0.2, 
             Ns = [50, 60, 70], 
-            xlims=(0.15, 4))
+            xlims=(0.15, 4),
+            critline = true)
 
     dfs = Dict()
     for N in Ns
@@ -35,16 +36,21 @@ function make_plot(df;
     for N in Ns
         @df dfs[N] plot!(:λ, :Δ0, yerr = :Δ0_err, label = "N = $N", msc=:auto)
     end
-    vline!([MHG.λcrit(α)], label = "λcrit", ls=:dash, lw=1, color=:black)
+    if critline
+        vline!([MHG.λcrit(α)], label = "λcrit", ls=:dash, lw=1, color=:black)
+    end
     return p
 end
 
 
 df = read_data()
 
-# make_plot(df, α=0.2, Ns=[50,60,70], xlims=(0.15,0.4))\savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
-# savefig(joinpath(@__DIR__, "fig_gd_α=0.2.pdf"))
 
+make_plot(df, α=0.1, Ns=[50, 70, 100, 120], xlims=(0.05,0.3))
+savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
 
-# make_plot(df, α=0.1, Ns=[50,70,100], xlims=(0.05,0.3))
-# savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
+make_plot(df, α=0.2, Ns=[50,60,70], xlims=(0.15,0.4))
+savefig(joinpath(@__DIR__, "fig_gd_α=0.2.pdf"))
+
+make_plot(df, α=0.4, Ns=[10, 15, 20, 25], xlims=(0.,1.), critline=false)
+savefig(joinpath(@__DIR__, "fig_gd_α=0.4.pdf"))

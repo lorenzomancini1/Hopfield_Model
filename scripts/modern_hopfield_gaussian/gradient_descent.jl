@@ -33,25 +33,33 @@ function span_gd(;
         λ = [0.1:0.1:1.0;],
         maxsteps = 1000,
         nsamples = 100, 
-        resfile = savename((; N, α, nsamples), "csv", digits=4),
+        resfile = savename("run_"*gethostname(), (; N, α, nsamples), "csv", digits=4),
         respath = datadir("raw", "modern_hopfield_gaussian", splitext(basename(@__FILE__))[1]), 
         )
-    
-    params_list = cartesian_list(; N, α, λ, nsamples)
-    allres = Vector{Any}(undef, length(params_list))
-    
-    ThreadsX.foreach(enumerate(params_list)) do (i, p)
-        stats = singlerun_gd(; p..., η, maxsteps)
-        allres[i] = merge(p, stats)
+
+    if resfile != "" && resfile !== nothing
+        resfile = joinpath(respath, resfile)
+        resfile = check_filename(resfile) # appends a number if the file already exists
+        touch(resfile)
     end
 
-    allres = DataFrame(allres)
-    if resfile != "" && resfile !== nothing
-        path = joinpath(respath, resfile)
-        path = check_filename(path) # appends a number if the file already exists
-        CSV.write(path, allres)
+    params_list = cartesian_list(; N, α, λ, nsamples)
+    
+    lck = ReentrantLock()
+    df = DataFrame()
+
+    ThreadsX.foreach(params_list) do p
+        stats = singlerun_gd(; p..., η, maxsteps)
+
+        lock(lck) do 
+            push!(df, merge(p, stats))
+            if resfile != "" && resfile !== nothing
+                CSV.write(resfile, df)
+            end
+        end
     end
-    return allres
+    
+    return df
 end
 
 # @time span_gd(resfile="run.csv", N=40, nsamples=100, α=0.2)
