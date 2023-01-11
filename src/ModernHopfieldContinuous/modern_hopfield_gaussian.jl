@@ -13,7 +13,15 @@ init_pattern(N) = randn(N)
 overlap(σ1::AbstractVector, σ2::AbstractVector) = σ1 ⋅ σ2 / length(σ1)
 sqdistance(σ1::AbstractVector, σ2::AbstractVector) = norm(σ1 .- σ2)^2 / length(σ1)
 
-generate_patterns(N, M) = randn(N, M)
+function generate_patterns(N, M; ξtype = :gaussian)
+    @assert ξ ∈ [:gaussian, :spherical]
+    ξ = randn(N, M)
+    if ξtype == :spherical
+        ξ .*= sqrt.(N ./ sum(ξ.^2, dims=1))
+    end
+    return ξ
+end
+
 
 function perturb(σ::AbstractVector, δ::Float64)
     N = length(σ)

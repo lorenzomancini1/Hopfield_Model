@@ -8,7 +8,7 @@ export  SH
 include("ModernHopfieldBinary/modern_hopfield_binary.jl")
 export MHB
 
-include("ModernHopfieldGaussian/modern_hopfield_gaussian.jl")
-export MHG
+include("ModernHopfieldContinuous/modern_hopfield_gaussian.jl")
+export MHC
 
 end
