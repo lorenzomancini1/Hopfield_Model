@@ -14,11 +14,12 @@ function singlerun_gd(; N = 50,
                     η = 0.5,
                     λ = 0.1,
                     nsamples = 100, 
-                    maxsteps = 1000)
+                    maxsteps = 1000, 
+                    ξtype = :gaussian)
 
     M = round(Int, exp(α * N))
     stats = mapreduce(Stats(), 1:nsamples) do _
-        ξ = MHG.generate_patterns(N, M)
+        ξ = MHG.generate_patterns(N, M; ξtype)
         σ0 = ξ[:,1]
         σ, res = MHG.gradient_descent(σ0, ξ; λ, η, maxsteps)
         return last(res)            
@@ -32,12 +33,14 @@ function span_gd(;
         η = 0.5,
         λ = [0.1:0.1:1.0;],
         maxsteps = 1000,
-        nsamples = 100, 
+        nsamples = 100,
+        ξtype = :gaussian,
         resfile = savename("run_"*gethostname(), (; N, α, nsamples), "csv", digits=4),
-        respath = datadir("raw", "modern_hopfield_gaussian", splitext(basename(@__FILE__))[1]), 
+        respath = datadir("raw", "modern_hopfield_xgaussian_$(ξtype)", splitext(basename(@__FILE__))[1]), 
         )
 
     if resfile != "" && resfile !== nothing
+        makepath(respath)
         resfile = joinpath(respath, resfile)
         resfile = check_filename(resfile) # appends a number if the file already exists
         touch(resfile)

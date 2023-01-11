@@ -52,5 +52,5 @@ savefig(joinpath(@__DIR__, "fig_gd_α=0.1.pdf"))
 make_plot(df, α=0.2, Ns=[50,60,70], xlims=(0.15,0.4))
 savefig(joinpath(@__DIR__, "fig_gd_α=0.2.pdf"))
 
-make_plot(df, α=0.4, Ns=[10, 15, 20, 25], xlims=(0.,1.), critline=false)
+make_plot(df, α=0.4, Ns=[10, 15, 20, 25, 35], xlims=(0.,1.), critline=false)
 savefig(joinpath(@__DIR__, "fig_gd_α=0.4.pdf"))
